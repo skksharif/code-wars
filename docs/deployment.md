@@ -43,6 +43,13 @@ Proposal: one Supabase project during development; decide at Gate 6 whether prod
 
 I will not create accounts, projects or resources, or deploy anything, without your explicit approval at Gate 6.
 
+## Local development and integration checks
+
+- Apply migrations and seed: `node scripts/db-apply.mjs` (reads `SUPABASE_DB_URL` from `apps/worker/.dev.vars`; `--check` only tests the connection).
+- Run the Worker: `npx wrangler dev` in `apps/worker`. Use `http://127.0.0.1:8787`, not `localhost`: on the development machine another program answers on the IPv6 `localhost:8787`.
+- End-to-end battle against real Supabase: `node scripts/e2e-battle.mjs` (add `--judge0` when the Worker runs with the real judge).
+- Concurrency and cron: `node scripts/e2e-race.mjs` (mock judge only).
+
 ## 5. Release steps (to be executed only after Gate 6 approval)
 1. Apply migrations to Supabase (`supabase db push`) and seed problems.
 2. Set Supabase Auth settings (email confirmation off, site URL, redirect URLs).

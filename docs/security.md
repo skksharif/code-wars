@@ -51,7 +51,8 @@ Last updated: 2026-11-14
 5. **Free-tier rate limiting only.** A determined attacker could exhaust the daily judge quota or the 100,000 Worker requests; this causes downtime, not data loss or cost.
 
 6. **Hidden tests live in the repository** (`supabase/seed/problems.ts` and the generated `seed.sql`). The GitHub repository must stay private, or anyone can read the hidden tests and reference solutions. Product owner decision 2026-11-14: the repository will be private.
-7. **Realtime policies are not yet verified.** The private presence-channel policies in the security migration only apply on a real Supabase project and are checked at Gate 5.
+7. **Realtime policies verified 2026-11-15** on the real project: both players can join the private presence channel and an outsider is refused.
+9. **Keys were shared in a chat on 2026-11-15** (Supabase secret key and database password). They should be rotated before any public launch.
 
 8. **The mock judge accepts any code.** `JUDGE_PROVIDER` has no default and the Worker refuses to start judging without it, but `wrangler.jsonc` currently sets it to `mock` for development. It must be changed to `judge0` at Gate 6.
 
