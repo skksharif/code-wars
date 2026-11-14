@@ -20,7 +20,7 @@ A real-time 1v1 competitive coding platform. Two players of similar rating are m
 | Hosting | Cloudflare Pages + Supabase |
 | Languages offered | Python, Java, C++, JavaScript |
 
-Cost target: ₹0/month on free tiers. No paid infrastructure without approval.
+Cost target: ₹0/month on free tiers, with one approved exception: Judge0 code execution is pay-per-use and capped (decision D10). No other paid infrastructure without approval.
 
 ## 3. MVP scope
 
@@ -87,5 +87,7 @@ Cost target: ₹0/month on free tiers. No paid infrastructure without approval.
 | D7 | Every Submit runs all hidden tests | Exact partial score | Stop at first failure | Approved 2026-11-14 |
 | D8 | Reveal final submissions to both players after the battle | Learning value | Keep private | Approved 2026-11-14 |
 | D9 | UI direction: neon esports (black, cyan for the player, pink for the opponent, angular type) with versus-style lobby, top versus bar in the battle room, split result screen, podium rankings | Product owner rejected the first calmer dark design | Blue and orange arena design; light, terminal or playful styles | Approved 2026-11-14 |
+| D10 | Hosted Judge0 on the pay-per-use Basic plan ($0.0017 per run), capped by the daily execution limit (50 a day, about ₹215 a month worst case) | The free 50-a-day plan no longer exists; product owner accepted a small capped cost on 2026-11-15 | Mock judge only; self-hosted Judge0; another execution service | Approved 2026-11-15 |
+| D11 | Language versions: Python 3.12, Java 17, C++ GCC 14.1, JavaScript Node 22 | Modern versions offered by Judge0 | Newest of everything; the older defaults | Approved 2026-11-15 |
 | D5 | MVP scope as in section 3 | Smallest complete competitive loop | Include friend challenges or rematch | Approved 2026-11-14 |
 | D6 | Defaults table in section 4 | Sensible starting values | Email verification on; other values | Approved 2026-11-14 |

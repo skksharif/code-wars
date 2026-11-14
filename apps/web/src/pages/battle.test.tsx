@@ -114,7 +114,7 @@ describe("battle room", () => {
       screen.getByRole("img", { name: "byte_rival has passed 4 of 5 hidden tests" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("timer")).toHaveAccessibleName(/Time left 1[34]:\d\d/);
-    expect(screen.getByText(/C\+\+ · 2 tries/)).toBeInTheDocument();
+    expect(screen.getByText(/C\+\+ \(GCC 14\) · 2 tries/)).toBeInTheDocument();
     expect(screen.getByText("The 2 is a peak.")).toBeInTheDocument();
     expect(await screen.findByLabelText("Code editor")).toBeInTheDocument();
   });
@@ -316,7 +316,7 @@ describe("result screen", () => {
     expect(screen.getByText("You passed every hidden test first.")).toBeInTheDocument();
     expect(screen.getByLabelText("Rating 1200 to 1216, change plus 16")).toBeInTheDocument();
     expect(screen.getByLabelText("Rating 1200 to 1184, change minus 16")).toBeInTheDocument();
-    expect(screen.getByText("Python 3 · 2 attempts · 5 of 5 hidden tests")).toBeInTheDocument();
+    expect(screen.getByText("Python 3.12 · 2 attempts · 5 of 5 hidden tests")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Battle again" })).toHaveAttribute("href", "/arena");
     expect(screen.queryByLabelText("Code editor")).not.toBeInTheDocument();
   });

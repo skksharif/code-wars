@@ -11,7 +11,7 @@ Last updated: 2026-11-14
 | 2 | Architecture, schema, API, security, deployment design | Approved 2026-11-14 |
 | 3 | UI/UX (pages, journey, visual direction) | Approved 2026-11-14: neon esports look with versus-style layout (second mockup) |
 | 4 | Implementation, one module at a time | Complete — M0 to M8 approved and committed |
-| 5 | Integration | In progress — real Supabase verified 2026-11-15 with the mock judge (40 end-to-end checks, 9 concurrency and cron checks). Pending: real Judge0, browser run |
+| 5 | Integration | In progress — real Supabase verified 2026-11-15 (40 end-to-end checks, 9 concurrency and cron checks); real Judge0 verified for all four languages and a full battle. Pending: browser run |
 | 6 | Deployment | Not started |
 
 ## Modules (each ends with tests, a report and an approval request)

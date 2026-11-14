@@ -1,12 +1,12 @@
 import type { Language } from "@code-wars/shared";
 import type { ExecuteRequest, ExecuteResult, JudgeProvider } from "./types";
 
-/** Judge0 CE language ids. Verified against the live API in the contract test (Gate 5). */
+/** Judge0 CE language ids, confirmed against the live /languages list on 2026-11-15. */
 export const JUDGE0_LANGUAGE_IDS: Record<Language, number> = {
-  python: 71, // Python 3.8
-  java: 62, // OpenJDK 13
-  cpp: 54, // GCC 9.2
-  javascript: 63, // Node.js 12
+  python: 100, // Python 3.12.5
+  java: 91, // JDK 17.0.6
+  cpp: 105, // GCC 14.1.0
+  javascript: 102, // Node.js 22.08.0
 };
 
 export interface Judge0Config {
@@ -50,7 +50,9 @@ export class Judge0Provider implements JudgeProvider {
 
   constructor(
     private readonly config: Judge0Config,
-    private readonly fetchFn: typeof fetch = fetch,
+    // Wrapped, not stored directly: the Workers runtime rejects `fetch` when it
+    // is called as a method of another object ("Illegal invocation").
+    private readonly fetchFn: typeof fetch = (input, init) => fetch(input, init),
     private readonly sleep: (ms: number) => Promise<void> = (ms) =>
       new Promise((resolve) => setTimeout(resolve, ms)),
   ) {}

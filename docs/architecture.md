@@ -110,7 +110,7 @@ npm workspaces; TypeScript everywhere; Vitest for tests.
 
 | Service | Limit | Effect |
 |---|---|---|
-| Judge0 hosted Basic | 50 submissions/day hard limit, batched included | A daily quota counter in the database; the Worker refuses politely when exhausted. Roughly 4–8 real battles a day, since every Submit costs one execution per hidden test |
+| Judge0 hosted Basic | Pay per use ($0.0017 per execution) as found on 2026-11-15; no free allowance | A daily quota counter in the database; the Worker refuses politely when exhausted. Roughly 4–8 real battles a day, since every Submit costs one execution per hidden test |
 | Cloudflare Workers Free | 100,000 requests/day, 10 ms CPU per request, 50 subrequests per request, 5 cron triggers | A submit uses about 12 subrequests; heartbeat every 5 s is fine for tens of concurrent users |
 | Supabase Free | 500 MB database, 200 concurrent Realtime connections, 100 messages/s, pauses after 7 idle days, 2 projects | Fine for MVP; the pause must be handled before any public launch |
 

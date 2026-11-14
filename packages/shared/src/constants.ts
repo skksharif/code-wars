@@ -4,10 +4,10 @@ export const LANGUAGES = ["python", "java", "cpp", "javascript"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 export const LANGUAGE_LABELS: Record<Language, string> = {
-  python: "Python 3",
-  java: "Java",
-  cpp: "C++",
-  javascript: "JavaScript",
+  python: "Python 3.12",
+  java: "Java 17",
+  cpp: "C++ (GCC 14)",
+  javascript: "JavaScript (Node 22)",
 };
 
 export const VERDICTS = [

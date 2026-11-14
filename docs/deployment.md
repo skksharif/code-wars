@@ -10,7 +10,7 @@ Last updated: 2026-11-14
 | Frontend (static build) | Cloudflare Pages, built from GitHub | Free |
 | API | Cloudflare Worker with one Cron Trigger (every minute) | Free |
 | Database, Auth, Realtime | Supabase project | Free |
-| Code execution | Judge0 CE hosted (RapidAPI Basic) | Free, 50 executions/day |
+| Code execution | Judge0 CE hosted (RapidAPI Basic) | Pay per use: $0.0017 per execution, capped by `JUDGE_DAILY_LIMIT` (approved 2026-11-15) |
 | Source | GitHub repository | Free |
 
 ## 2. Environments
@@ -58,7 +58,7 @@ I will not create accounts, projects or resources, or deploy anything, without y
 5. Run the post-deploy checklist in `security.md` section 5 and a two-account smoke battle.
 
 ## 6. Free-tier limitations
-- Judge0: 50 executions per day in total. When exhausted, Run and Submit return a clear "judge quota exhausted" message until 00:00 UTC.
+- Judge0: not free. Each execution costs $0.0017. The Worker stops at `JUDGE_DAILY_LIMIT` executions a day (default 50, about $0.085 a day at most); Run and Submit then return a clear "judge quota exhausted" message until 00:00 UTC.
 - Supabase: project pauses after 7 days without activity and must be resumed manually; 500 MB database; 200 concurrent Realtime connections.
 - Workers: 100,000 requests per day; 10 ms CPU per request.
-- Expected cost: ₹0. Any change that could incur cost will be raised for approval first.
+- Expected cost: ₹0 for hosting and database; up to about ₹215 a month for Judge0 at the default cap. Any other change that could incur cost will be raised for approval first.

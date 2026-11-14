@@ -125,9 +125,9 @@ describe("history", () => {
     expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute("href", "/battle/b-2");
     expect(links[0]).toHaveTextContent("Loss vs stack_sage−15");
-    expect(links[0]).toHaveTextContent("Grid Escape · C++");
+    expect(links[0]).toHaveTextContent("Grid Escape · C++ (GCC 14)");
     expect(links[1]).toHaveTextContent("Win vs byte_rival+16");
-    expect(links[1]).toHaveTextContent("Count the Peaks · Python 3");
+    expect(links[1]).toHaveTextContent("Count the Peaks · Python 3.12");
   });
 
   it("shows the profile and a rating history chart", async () => {
