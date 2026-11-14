@@ -61,7 +61,7 @@ Last updated: 2026-11-14
 ### 3.4 Code execution (Run and Submit)
 1. Client posts `{language, code}` to `/run` or `/submit`.
 2. Worker calls `begin_submission(...)`: checks participant, battle active, deadline, cooldown, no other in-flight submission (partial unique index), code size; inserts a `judging` row; reserves judge quota.
-3. Worker loads tests with the service role (samples for Run, hidden for Submit) and sends all of them to the `JudgeProvider` with the problem's time and memory limits. Every test is always run, so the partial score is exact (a compile error ends the run early, since no test can pass).
+3. Worker loads tests with the service role (samples for Run, hidden for Submit) and sends all of them to the `JudgeProvider` with the problem's time and memory limits. Every test is always run, so the partial score is exact. The first test runs alone, so a compile error or judge outage costs one execution; the rest then run in parallel.
 4. Worker calls `complete_submission(...)` with verdict and passed count. In the same transaction the function updates `battle_players` (attempts, best_passed) and, if every hidden test passed, calls `finish_battle`.
 5. Response to the player: verdict, passed/total, compile error text, and for sample tests only the stdout/expected diff. Nothing about hidden test content.
 6. A `judging` row older than 90 s is marked `error` by the sweep and does not block the player.

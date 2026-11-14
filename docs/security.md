@@ -53,7 +53,10 @@ Last updated: 2026-11-14
 6. **Hidden tests live in the repository** (`supabase/seed/problems.ts` and the generated `seed.sql`). The GitHub repository must stay private, or anyone can read the hidden tests and reference solutions. Product owner decision 2026-11-14: the repository will be private.
 7. **Realtime policies are not yet verified.** The private presence-channel policies in the security migration only apply on a real Supabase project and are checked at Gate 5.
 
+8. **The mock judge accepts any code.** `JUDGE_PROVIDER` has no default and the Worker refuses to start judging without it, but `wrangler.jsonc` currently sets it to `mock` for development. It must be changed to `judge0` at Gate 6.
+
 ## 5. Verification before deployment (Gate 6)
 - Automated tests that an authenticated non-participant cannot read a battle, problem or submission, and that anon cannot read anything except profiles and the leaderboard.
 - Check that the built frontend bundle contains no service role key or Judge0 key.
 - Check function grants and RLS state on the live project.
+- Confirm the deployed Worker has `JUDGE_PROVIDER=judge0`.

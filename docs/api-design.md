@@ -69,6 +69,7 @@ interface JudgeProvider {
     stdin: string;
     timeLimitMs: number;
     memoryLimitKb: number;
+    mockHint?: { index: number; expectedOutput: string }; // mock judge only; never sent to Judge0
   }): Promise<{
     status: "ok" | "compile_error" | "runtime_error" | "time_limit" | "memory_limit" | "internal_error";
     stdout: string;

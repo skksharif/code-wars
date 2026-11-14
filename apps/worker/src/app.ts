@@ -5,7 +5,9 @@ import { createSupabaseTokenVerifier, requireAuth, type TokenVerifier } from "./
 import { createSupabaseDb, type Db, type DbFactory } from "./db";
 import { allowedOrigins, type Env } from "./env";
 import { ApiError, toApiError } from "./errors";
+import { createJudge, type JudgeFactory } from "./judge/index";
 import { registerMatchmakingRoutes } from "./routes/matchmaking";
+import { registerSubmissionRoutes } from "./routes/submissions";
 
 export interface AppContext {
   Bindings: Env;
@@ -20,17 +22,20 @@ export interface AppContext {
 export interface AppDeps {
   verifyToken: TokenVerifier;
   createDb: DbFactory;
+  createJudge: JudgeFactory;
 }
 
 export const defaultDeps: AppDeps = {
   verifyToken: createSupabaseTokenVerifier(),
   createDb: (env) => createSupabaseDb(env),
+  createJudge,
 };
 
 /** Larger than the 64 KB code limit plus JSON overhead. */
 const MAX_BODY_BYTES = 100 * 1024;
 
-export function createApp(deps: AppDeps = defaultDeps): Hono<AppContext> {
+export function createApp(overrides: Partial<AppDeps> = {}): Hono<AppContext> {
+  const deps: AppDeps = { ...defaultDeps, ...overrides };
   const app = new Hono<AppContext>();
 
   app.use(
@@ -63,6 +68,7 @@ export function createApp(deps: AppDeps = defaultDeps): Hono<AppContext> {
   });
 
   registerMatchmakingRoutes(app);
+  registerSubmissionRoutes(app, deps.createJudge);
 
   app.notFound((c) => c.json(new ApiError("NOT_FOUND").toBody(), 404));
 
