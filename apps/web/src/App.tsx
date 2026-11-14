@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { ArenaPage } from "./pages/ArenaPage";
+import { BattlePage } from "./pages/BattlePage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 
@@ -34,6 +35,14 @@ export function App() {
           element={
             <RequireAuth>
               <ArenaPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/battle/:id"
+          element={
+            <RequireAuth>
+              <BattlePage />
             </RequireAuth>
           }
         />

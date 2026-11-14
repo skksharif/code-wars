@@ -1,25 +1,15 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
-import { App } from "./App";
-import { AuthProvider } from "./auth/AuthContext";
 import { AuthError } from "./lib/authService";
 import { createFakeAuth, TEST_USER, type FakeAuth } from "./test/fakeAuth";
+import { createFakeServices, renderWithApp } from "./test/fakeServices";
 
 afterEach(cleanup);
 
-function renderApp(auth: FakeAuth, path = "/") {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <AuthProvider service={auth}>
-        <App />
-      </AuthProvider>
-    </MemoryRouter>,
-  );
-}
+const renderApp = (auth: FakeAuth, path = "/") => renderWithApp(auth, createFakeServices(), path);
 
 describe("routing and access", () => {
   it("shows the landing page with the sign-up form to visitors", async () => {

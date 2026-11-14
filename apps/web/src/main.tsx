@@ -4,8 +4,11 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { AuthProvider } from "./auth/AuthContext";
 import "./index.css";
+import { createApiClient } from "./lib/api";
 import { createSupabaseAuthService } from "./lib/authService";
 import { createSupabase, readConfig } from "./lib/config";
+import { createSupabaseBattleData, createSupabaseLive } from "./lib/live";
+import { DEFAULT_TIMING, ServicesProvider, type Services } from "./services";
 
 const root = createRoot(document.getElementById("root")!);
 const config = readConfig(import.meta.env);
@@ -21,12 +24,24 @@ if (!config) {
     </main>,
   );
 } else {
-  const authService = createSupabaseAuthService(createSupabase(config));
+  const supabase = createSupabase(config);
+  const authService = createSupabaseAuthService(supabase);
+  const services: Services = {
+    api: createApiClient({
+      baseUrl: config.apiBaseUrl,
+      getToken: () => authService.getAccessToken(),
+    }),
+    live: createSupabaseLive(supabase),
+    data: createSupabaseBattleData(supabase),
+    timing: DEFAULT_TIMING,
+  };
   root.render(
     <StrictMode>
       <BrowserRouter>
         <AuthProvider service={authService}>
-          <App />
+          <ServicesProvider value={services}>
+            <App />
+          </ServicesProvider>
         </AuthProvider>
       </BrowserRouter>
     </StrictMode>,
