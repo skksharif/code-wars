@@ -1,0 +1,13 @@
+{
+  // Cloudflare Worker configuration. Secrets (SUPABASE_SERVICE_ROLE_KEY,
+  // JUDGE0_API_KEY) are never stored here: use `wrangler secret put` in
+  // production and .dev.vars locally.
+  "name": "code-wars-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "vars": {
+    "JUDGE_PROVIDER": "mock",
+    "JUDGE_DAILY_LIMIT": "50",
+    "ALLOWED_ORIGINS": "http://localhost:5173",
+  },
+}
