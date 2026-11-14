@@ -33,9 +33,17 @@ export function Layout({ children }: { children: ReactNode }) {
         <Logo />
         <nav aria-label="Main" className="flex flex-wrap items-center gap-6">
           {status === "signedIn" ? (
+            <NavLink to="/arena" className={navLink}>
+              Arena
+            </NavLink>
+          ) : null}
+          <NavLink to="/rankings" className={navLink}>
+            Rankings
+          </NavLink>
+          {status === "signedIn" ? (
             <>
-              <NavLink to="/arena" className={navLink}>
-                Arena
+              <NavLink to="/history" className={navLink}>
+                History
               </NavLink>
               {profile ? (
                 <span className="font-mono text-sm text-soft">

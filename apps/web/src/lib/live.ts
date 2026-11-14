@@ -22,8 +22,34 @@ export interface FinalSubmission {
   total: number;
 }
 
+export interface LeaderboardEntry {
+  id: string;
+  username: string;
+  rating: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  rank: number;
+}
+
+export interface HistoryEntry {
+  battleId: string;
+  result: "win" | "loss" | "draw";
+  ratingBefore: number;
+  ratingAfter: number;
+  language: Language | null;
+  bestPassed: number;
+  finishedAt: string;
+  problemTitle: string;
+  opponent: string;
+}
+
 /** Read-only data the browser fetches directly from Supabase under RLS. */
 export interface BattleData {
+  /** Top players by rating. Public. */
+  getLeaderboard(limit: number): Promise<LeaderboardEntry[]>;
+  /** The user's finished battles, newest first. */
+  getHistory(userId: string): Promise<HistoryEntry[]>;
   /** Each player's latest submitted solution. The opponent's is readable only after the battle. */
   getFinalSubmissions(battleId: string): Promise<FinalSubmission[]>;
 }
@@ -79,8 +105,78 @@ interface SubmissionRow {
   total: number;
 }
 
+interface HistoryRow {
+  battle_id: string;
+  result: "win" | "loss" | "draw";
+  rating_before: number;
+  rating_after: number;
+  language: Language | null;
+  best_passed: number;
+  battles: { finished_at: string; problems: { title: string } | null } | null;
+}
+
+interface OpponentRow {
+  battle_id: string;
+  profiles: { username: string } | null;
+}
+
 export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
   return {
+    async getLeaderboard(limit) {
+      const { data, error } = await supabase
+        .from("leaderboard")
+        .select("id, username, rating, wins, losses, draws, rank")
+        .order("rating", { ascending: false })
+        .order("username")
+        .limit(limit);
+      if (error) throw new Error("Could not load the rankings.");
+      return (data ?? []) as LeaderboardEntry[];
+    },
+
+    async getHistory(userId) {
+      const { data, error } = await supabase
+        .from("battle_players")
+        .select(
+          "battle_id, result, rating_before, rating_after, language, best_passed, battles(finished_at, problems(title))",
+        )
+        .eq("user_id", userId)
+        .not("rating_after", "is", null)
+        .limit(100);
+      if (error) throw new Error("Could not load your battles.");
+      const rows = (data ?? []) as unknown as HistoryRow[];
+      if (rows.length === 0) return [];
+
+      const opponents = await supabase
+        .from("battle_players")
+        .select("battle_id, profiles(username)")
+        .in(
+          "battle_id",
+          rows.map((row) => row.battle_id),
+        )
+        .neq("user_id", userId);
+      if (opponents.error) throw new Error("Could not load your battles.");
+      const names = new Map(
+        ((opponents.data ?? []) as unknown as OpponentRow[]).map((row) => [
+          row.battle_id,
+          row.profiles?.username ?? "unknown",
+        ]),
+      );
+
+      return rows
+        .map((row) => ({
+          battleId: row.battle_id,
+          result: row.result,
+          ratingBefore: row.rating_before,
+          ratingAfter: row.rating_after,
+          language: row.language,
+          bestPassed: row.best_passed,
+          finishedAt: row.battles?.finished_at ?? "",
+          problemTitle: row.battles?.problems?.title ?? "Unknown problem",
+          opponent: names.get(row.battle_id) ?? "unknown",
+        }))
+        .sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
+    },
+
     async getFinalSubmissions(battleId) {
       const { data, error } = await supabase
         .from("submissions")

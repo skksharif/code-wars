@@ -48,15 +48,16 @@ describe("lobby", () => {
   });
 
   it("searches with a heartbeat and enters the battle when matched", async () => {
-    services.api.joinMatchmaking
-      .mockResolvedValueOnce({ status: "queued", waitedMs: 0 })
-      .mockResolvedValueOnce({ status: "queued", waitedMs: 10_000 })
-      .mockResolvedValue({ status: "matched", battleId: BATTLE_ID });
+    // Each stage holds until the test has seen it, so nothing depends on timing.
+    services.api.joinMatchmaking.mockResolvedValue({ status: "queued", waitedMs: 0 });
     open("/arena");
     await userEvent.click(await screen.findByRole("button", { name: "Find Battle" }));
-
     expect(await screen.findByText(/Searching rating 1116 to 1316/)).toBeInTheDocument();
+
+    services.api.joinMatchmaking.mockResolvedValue({ status: "queued", waitedMs: 10_000 });
     expect(await screen.findByText(/Searching rating 1066 to 1366/)).toBeInTheDocument();
+
+    services.api.joinMatchmaking.mockResolvedValue({ status: "matched", battleId: BATTLE_ID });
     expect(await screen.findByRole("timer")).toBeInTheDocument();
     expect(services.api.joinMatchmaking.mock.calls.length).toBeGreaterThanOrEqual(3);
   });

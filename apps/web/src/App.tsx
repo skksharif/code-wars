@@ -4,8 +4,10 @@ import { useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { ArenaPage } from "./pages/ArenaPage";
 import { BattlePage } from "./pages/BattlePage";
+import { HistoryPage } from "./pages/HistoryPage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RankingsPage } from "./pages/RankingsPage";
 
 /** Sends signed-out visitors to the log-in page and brings them back afterwards. */
 export function RequireAuth({ children }: { children: ReactNode }) {
@@ -43,6 +45,15 @@ export function App() {
           element={
             <RequireAuth>
               <BattlePage />
+            </RequireAuth>
+          }
+        />
+        <Route path="/rankings" element={<RankingsPage />} />
+        <Route
+          path="/history"
+          element={
+            <RequireAuth>
+              <HistoryPage />
             </RequireAuth>
           }
         />

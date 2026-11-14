@@ -4,7 +4,12 @@ import { vi } from "vitest";
 import { App } from "../App";
 import { AuthProvider } from "../auth/AuthContext";
 import type { ApiClient, BattlePlayer, BattleState } from "../lib/api";
-import type { BattleWatchHandlers, FinalSubmission } from "../lib/live";
+import type {
+  BattleWatchHandlers,
+  FinalSubmission,
+  HistoryEntry,
+  LeaderboardEntry,
+} from "../lib/live";
 import { ServicesProvider, type Services } from "../services";
 import type { FakeAuth } from "./fakeAuth";
 
@@ -74,6 +79,8 @@ export interface FakeServices extends Services {
   /** Handlers registered by the battle page, to simulate live events. */
   watchers: BattleWatchHandlers[];
   solutions: FinalSubmission[];
+  leaderboard: LeaderboardEntry[] | Error;
+  history: HistoryEntry[] | Error;
 }
 
 export function createFakeServices(): FakeServices {
@@ -81,6 +88,8 @@ export function createFakeServices(): FakeServices {
   const services: FakeServices = {
     watchers,
     solutions: [],
+    leaderboard: [],
+    history: [],
     api: {
       joinMatchmaking: vi.fn<ApiClient["joinMatchmaking"]>(async () => ({
         status: "queued",
@@ -113,7 +122,17 @@ export function createFakeServices(): FakeServices {
         };
       },
     },
-    data: { getFinalSubmissions: async () => services.solutions },
+    data: {
+      getFinalSubmissions: async () => services.solutions,
+      getLeaderboard: async () => {
+        if (services.leaderboard instanceof Error) throw services.leaderboard;
+        return services.leaderboard;
+      },
+      getHistory: async () => {
+        if (services.history instanceof Error) throw services.history;
+        return services.history;
+      },
+    },
     // Short intervals so tests run on real timers without waiting.
     timing: { heartbeatMs: 30, tickMs: 20, pollMs: 100_000, retryMs: 40 },
   };
