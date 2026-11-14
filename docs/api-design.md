@@ -13,7 +13,7 @@ Base path `/api`. Every route except `/api/health` requires `Authorization: Bear
 | POST | `/matchmaking/join` | — | `{ status: "queued", waitedMs }`, `{ status: "matched", battleId }` or `{ status: "timeout" }` (60 s without a match; the user is removed from the queue) | Also the heartbeat; call every 5 s while searching |
 | POST | `/matchmaking/cancel` | — | `{ ok: true }` | |
 | GET | `/battles/active` | — | `{ battleId \| null }` | Used on page load to resume |
-| GET | `/battles/:id` | — | Battle, both players' public progress, problem and samples (only after `starts_at`), own latest submissions, `serverTime` | Participants only |
+| GET | `/battles/:id` | — | `serverTime`, `battle`, `players` (you first, with progress and rating fields), `totalTests`, and `problem` with samples (null until `starts_at`). Own submissions are read directly from Supabase | Participants only |
 | POST | `/battles/:id/run` | `{ language, code }` | `{ verdict, passed, total, compileOutput?, cases: [{ input, expected, actual, status }] }` | Sample tests only; 5 s cooldown |
 | POST | `/battles/:id/submit` | `{ language, code }` | `{ submissionId, verdict, passed, total, compileOutput?, battleFinished }` | Hidden tests; 10 s cooldown; no test content returned |
 | POST | `/battles/:id/forfeit` | — | `{ ok: true }` | |

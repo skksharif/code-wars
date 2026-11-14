@@ -5,6 +5,8 @@
   "name": "code-wars-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
+  // Every minute: resolve expired battles and clear stuck rows.
+  "triggers": { "crons": ["* * * * *"] },
   "vars": {
     "JUDGE_PROVIDER": "mock",
     "JUDGE_DAILY_LIMIT": "50",

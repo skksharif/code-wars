@@ -144,6 +144,8 @@ All are `SECURITY DEFINER` with a fixed `search_path`; `EXECUTE` is revoked from
 | `finish_battle(battle, winner, reason)` (internal) | End battle, apply ELO, set results | `SELECT ... FOR UPDATE` on the battle; no-op unless `active` |
 | `forfeit_battle(user, battle)` | Opponent wins | via `finish_battle` |
 | `finalize_battle_if_expired(battle)` / `finalize_expired_battles()` | Time-up resolution by best_passed; draw on equal | via `finish_battle` |
+| `get_battle_state(user, battle)` | One consistent read of battle, players and (after start) the problem, using database time; resolves the battle first if its time is up | participant check |
+| `request_finalize(user, battle)` | Participant-checked time-up resolution for the client-triggered finalize route | via `finalize_battle_if_expired` |
 | `sweep_stale()` | Mark stuck `judging` rows as `error`; purge stale queue rows | — |
 
 ## 4. ELO
