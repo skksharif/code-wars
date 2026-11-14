@@ -9,7 +9,7 @@ Last updated: 2026-11-14
 |---|---|---|
 | 1 | Requirements and MVP scope | Approved 2026-11-14 |
 | 2 | Architecture, schema, API, security, deployment design | Approved 2026-11-14 |
-| 3 | UI/UX (pages, journey, visual direction) | First mockup rejected; second (neon esports, new layout) awaiting review |
+| 3 | UI/UX (pages, journey, visual direction) | Approved 2026-11-14: neon esports look with versus-style layout (second mockup) |
 | 4 | Implementation, one module at a time | In progress — M0, M1 and M2 approved and committed |
 | 5 | Integration | Not started |
 | 6 | Deployment | Not started |

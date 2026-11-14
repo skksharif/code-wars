@@ -5,6 +5,7 @@ import { createSupabaseTokenVerifier, requireAuth, type TokenVerifier } from "./
 import { createSupabaseDb, type Db, type DbFactory } from "./db";
 import { allowedOrigins, type Env } from "./env";
 import { ApiError, toApiError } from "./errors";
+import { registerMatchmakingRoutes } from "./routes/matchmaking";
 
 export interface AppContext {
   Bindings: Env;
@@ -60,6 +61,8 @@ export function createApp(deps: AppDeps = defaultDeps): Hono<AppContext> {
     c.set("db", deps.createDb(c.env));
     await next();
   });
+
+  registerMatchmakingRoutes(app);
 
   app.notFound((c) => c.json(new ApiError("NOT_FOUND").toBody(), 404));
 

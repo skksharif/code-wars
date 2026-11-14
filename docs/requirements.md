@@ -86,5 +86,6 @@ Cost target: ₹0/month on free tiers. No paid infrastructure without approval.
 | D4 | Hosted Judge0 free tier plus mock judge | Keeps cost at ₹0 | Self-hosted Judge0; decide after research | Approved 2026-11-14 |
 | D7 | Every Submit runs all hidden tests | Exact partial score | Stop at first failure | Approved 2026-11-14 |
 | D8 | Reveal final submissions to both players after the battle | Learning value | Keep private | Approved 2026-11-14 |
+| D9 | UI direction: neon esports (black, cyan for the player, pink for the opponent, angular type) with versus-style lobby, top versus bar in the battle room, split result screen, podium rankings | Product owner rejected the first calmer dark design | Blue and orange arena design; light, terminal or playful styles | Approved 2026-11-14 |
 | D5 | MVP scope as in section 3 | Smallest complete competitive loop | Include friend challenges or rematch | Approved 2026-11-14 |
 | D6 | Defaults table in section 4 | Sensible starting values | Email verification on; other values | Approved 2026-11-14 |
