@@ -31,7 +31,7 @@ Cost target: ₹0/month on free tiers. No paid infrastructure without approval.
 - Run (sample tests) and Submit (hidden tests) via the Worker and Judge0
 - ELO rating updates, rating history, global leaderboard
 - Battle history: opponent, problem, submission results, rating change
-- Seed set of about 15 original stdin/stdout problems with sample and hidden tests
+- Seed set of original stdin/stdout problems with sample and hidden tests (12 delivered in M1: 6 easy, 4 medium, 2 hard; more can be added in `supabase/seed/problems.ts`)
 
 ### Out of scope (later)
 - Friend challenges, rematch, private tournaments, chat, spectating

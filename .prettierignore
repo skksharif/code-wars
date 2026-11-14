@@ -4,3 +4,4 @@ coverage
 .wrangler
 package-lock.json
 docs
+supabase/seed/seed.sql

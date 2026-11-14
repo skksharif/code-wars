@@ -11,7 +11,7 @@ All tables live in `public`, have RLS enabled, and are changed only through migr
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | references `auth.users(id)` on delete cascade |
-| username | citext unique not null | 3–20 chars, `^[A-Za-z0-9_]+$` |
+| username | text not null | 3–20 chars, `^[A-Za-z0-9_]+$`; unique index on `lower(username)` (no extension needed) |
 | rating | int not null default 1200 | |
 | wins, losses, draws | int not null default 0 | |
 | created_at | timestamptz default now() | |
@@ -92,6 +92,7 @@ Unique index: `(user_id) WHERE is_active` — at most one active battle per user
 | status | text | `judging`, `done`, `error` |
 | verdict | text null | `accepted`, `wrong_answer`, `compile_error`, `runtime_error`, `time_limit`, `memory_limit`, `internal_error` |
 | passed, total | int | |
+| reserved_executions | int | judge quota reserved at begin; unused part returned on completion |
 | compile_output | text null | truncated to 4 KB |
 | created_at, judged_at | timestamptz | |
 
@@ -107,7 +108,7 @@ No client policies.
 
 ### Views
 - `leaderboard`: username, rating, wins, losses, draws, rank. Public read.
-- `rating_history`: per user, from finished `battle_players` rows (battle, rating_before, rating_after, delta, finished_at).
+- `rating_history`: from finished `battle_players` rows (user, battle, rating_before, rating_after, delta, result, finished_at). Under RLS a user sees rows for battles they took part in.
 
 ## 2. Row Level Security
 
@@ -134,7 +135,9 @@ All are `SECURITY DEFINER` with a fixed `search_path`; `EXECUTE` is revoked from
 |---|---|---|
 | `handle_new_user()` (trigger) | Create profile on sign-up | unique username |
 | `is_username_available(text)` | Sign-up form check; callable by anon | — |
-| `find_match(user)` | Join/heartbeat the queue or create a battle | transaction advisory lock; active-battle unique index |
+| `is_battle_participant(battle)` | Used by RLS policies; callable by authenticated; answers only about the caller | — |
+| `match_window(joined_at)` | Rating gap accepted after waiting | — |
+| `find_match(user)` | Join/heartbeat the queue or create a battle; returns the existing battle if the user already has an active one; returns `timeout` after 60 s | transaction advisory lock; active-battle unique index |
 | `cancel_matchmaking(user)` | Leave the queue | — |
 | `begin_submission(user, battle, kind, language, code)` | Validate and insert a `judging` row; reserve judge quota | in-flight unique index; deadline and cooldown checked with `now()` |
 | `complete_submission(submission, verdict, passed, total, compile_output)` | Record result; update player progress; finish battle on full solve | only acts on `judging` rows; calls `finish_battle` |

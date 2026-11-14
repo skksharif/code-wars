@@ -1,0 +1,74 @@
+import { readFileSync } from "node:fs";
+import type { PGlite } from "@electric-sql/pglite";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { buildSeedSql, SEED_PATH } from "../seed/generate.ts";
+import { PROBLEMS } from "../seed/problems.ts";
+import { all, createDb } from "./helpers.ts";
+
+let db: PGlite;
+beforeAll(async () => {
+  db = await createDb();
+});
+afterAll(() => db.close());
+
+describe("seed problems", () => {
+  it("seed.sql is up to date with problems.ts", () => {
+    expect(readFileSync(SEED_PATH, "utf8")).toBe(buildSeedSql());
+  });
+
+  it("every problem has two samples and at least five hidden tests", async () => {
+    const rows = await all<{ slug: string; samples: number; hidden: number }>(
+      db,
+      `select p.slug, jsonb_array_length(p.samples) as samples,
+              (select count(*)::int from public.problem_tests t where t.problem_id = p.id) as hidden
+       from public.problems p order by p.slug`,
+    );
+    expect(rows).toHaveLength(PROBLEMS.length);
+    for (const row of rows) {
+      expect(row.samples, row.slug).toBe(2);
+      expect(row.hidden, row.slug).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it("covers every difficulty", async () => {
+    const rows = await all<{ difficulty: string; n: number }>(
+      db,
+      "select difficulty, count(*)::int as n from public.problems group by difficulty order by difficulty",
+    );
+    expect(rows).toEqual([
+      { difficulty: "easy", n: 6 },
+      { difficulty: "hard", n: 2 },
+      { difficulty: "medium", n: 4 },
+    ]);
+  });
+
+  it("reference solutions give known answers", () => {
+    const solve = (slug: string, input: string) =>
+      PROBLEMS.find((p) => p.slug === slug)!.solve(input);
+    expect(solve("sum-of-evens", "5\n1 2 3 4 5")).toBe("6");
+    expect(solve("count-vowels", "Hello World")).toBe("3");
+    expect(solve("second-largest", "5\n3 9 9 4 1")).toBe("4");
+    expect(solve("second-largest", "3\n5 5 5")).toBe("-1");
+    expect(solve("reverse-words", "code wars is fun")).toBe("fun is wars code");
+    expect(solve("digit-root", "9875")).toBe("2");
+    expect(solve("peak-count", "7\n1 3 2 5 5 4 6")).toBe("1");
+    expect(solve("balanced-brackets", "{[()]}()")).toBe("YES");
+    expect(solve("balanced-brackets", "([)]")).toBe("NO");
+    expect(solve("longest-unique-run", "abcabcbb")).toBe("3");
+    expect(solve("pair-sum-count", "5 6\n1 5 3 3 2")).toBe("2");
+    expect(solve("merge-intervals", "4\n1 3\n2 6\n8 10\n10 12")).toBe("2 9");
+    expect(solve("fewest-coins", "3 11\n1 5 6")).toBe("2");
+    expect(solve("fewest-coins", "2 7\n2 4")).toBe("-1");
+    expect(solve("grid-escape", "3 4\nS.#.\n.##.\n...E")).toBe("5");
+    expect(solve("grid-escape", "1 3\nS#E")).toBe("-1");
+  });
+
+  it("test inputs have no blank lines, carriage returns or stray whitespace", () => {
+    for (const p of PROBLEMS) {
+      for (const input of [...p.hidden, ...p.samples.map((s) => s.input)]) {
+        expect(input.length, p.slug).toBeGreaterThan(0);
+        expect(input, p.slug).not.toMatch(/\n\n|\s$|^\s|\r/);
+      }
+    }
+  });
+});

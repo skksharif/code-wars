@@ -50,6 +50,9 @@ Last updated: 2026-11-14
 4. **No password-strength rules beyond the Supabase default** (minimum 6 characters) unless you want stricter ones.
 5. **Free-tier rate limiting only.** A determined attacker could exhaust the daily judge quota or the 100,000 Worker requests; this causes downtime, not data loss or cost.
 
+6. **Hidden tests live in the repository** (`supabase/seed/problems.ts` and the generated `seed.sql`). The GitHub repository must stay private, or anyone can read the hidden tests and reference solutions. Product owner decision 2026-11-14: the repository will be private.
+7. **Realtime policies are not yet verified.** The private presence-channel policies in the security migration only apply on a real Supabase project and are checked at Gate 5.
+
 ## 5. Verification before deployment (Gate 6)
 - Automated tests that an authenticated non-participant cannot read a battle, problem or submission, and that anon cannot read anything except profiles and the leaderboard.
 - Check that the built frontend bundle contains no service role key or Judge0 key.
