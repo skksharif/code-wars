@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* Neon esports theme (approved at Gate 3). */
+@theme {
+  --color-ground: #05060a;
+  --color-panel: #0d0f17;
+  --color-panel-deep: #090b12;
+  --color-line: #232838;
+  --color-line-strong: #3a4160;
+  --color-ink: #f2f5ff;
+  --color-soft: #c3cae0;
+  --color-muted: #9ba3b8;
+  --color-you: #22e6ff;
+  --color-rival: #ff2e9a;
+
+  --font-display: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Slanted button and badge shape. */
+.cut {
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+}
+
+.glow-you {
+  box-shadow: 0 0 28px rgba(34, 230, 255, 0.45);
+}
+.glow-rival {
+  box-shadow: 0 0 28px rgba(255, 46, 154, 0.35);
+}
+.text-glow-you {
+  text-shadow: 0 0 28px rgba(34, 230, 255, 0.7);
+}
+.text-glow-rival {
+  text-shadow: 0 0 28px rgba(255, 46, 154, 0.7);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-you);
+  outline-offset: 2px;
+}

@@ -5,3 +5,4 @@ coverage
 package-lock.json
 docs
 supabase/seed/seed.sql
+dist-types

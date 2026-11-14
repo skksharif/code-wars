@@ -1,4 +1,17 @@
 {
   "files": [],
-  "references": [{ "path": "packages/shared" }, { "path": "supabase" }, { "path": "apps/worker" }]
+  "references": [
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "supabase"
+    },
+    {
+      "path": "apps/worker"
+    },
+    {
+      "path": "apps/web"
+    }
+  ]
 }
