@@ -50,7 +50,7 @@ Last updated: 2026-11-14
 4. **No password-strength rules beyond the Supabase default** (minimum 6 characters) unless you want stricter ones.
 5. **Free-tier rate limiting only.** A determined attacker could exhaust the daily judge quota or the 100,000 Worker requests; this causes downtime, not data loss or cost.
 
-6. **Hidden tests live in the repository** (`supabase/seed/problems.ts` and the generated `seed.sql`). The GitHub repository must stay private, or anyone can read the hidden tests and reference solutions. Product owner decision 2026-11-14: the repository will be private.
+6. **Hidden tests live in the repository** (`supabase/seed/problems.ts` and the generated `seed.sql`). The GitHub repository must stay private, or anyone can read the hidden tests and reference solutions. Product owner decision 2026-11-14 was a private repository; **superseded 2026-11-15: the product owner chose a public repository (github.com/skksharif/code-wars) and accepted that hidden tests and reference solutions are publicly readable.** Moving the hidden tests out of the repository is the recommended follow-up before any real competition.
 7. **Realtime policies verified 2026-11-15** on the real project: both players can join the private presence channel and an outsider is refused.
 9. **Keys were shared in a chat on 2026-11-15** (Supabase secret key and database password). They should be rotated before any public launch.
 
