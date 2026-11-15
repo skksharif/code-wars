@@ -13,6 +13,13 @@ export function LandingPage() {
   return (
     <main className="flex flex-col items-center gap-10 px-[5%] py-14">
       <section className="flex flex-col items-center gap-5 text-center">
+        <img
+          src="/logo.png"
+          alt="Code Wars"
+          width={560}
+          height={299}
+          className="block h-auto w-[min(320px,80vw)]"
+        />
         <p className="m-0 font-mono text-sm tracking-[0.2em] text-rival uppercase">
           Ranked 1v1 · 15 minutes · winner takes rating
         </p>

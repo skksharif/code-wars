@@ -3,13 +3,18 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Avatar } from "./Avatar";
 
+/** The brand: the clashing-brackets mark beside the CODE WARS lettering. */
 export function Logo() {
   return (
-    <Link
-      to="/"
-      className="text-glow-you font-display text-2xl font-bold tracking-wider text-ink italic no-underline"
-    >
-      CODE<span className="text-you">WARS</span>
+    <Link to="/" aria-label="Code Wars home" className="flex items-center gap-2.5 no-underline">
+      <img src="/logo-mark.png" alt="" width={55} height={36} className="block h-9 w-auto" />
+      <img
+        src="/logo-wordmark.png"
+        alt=""
+        width={144}
+        height={18}
+        className="block h-[18px] w-auto"
+      />
     </Link>
   );
 }

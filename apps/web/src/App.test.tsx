@@ -22,6 +22,15 @@ describe("routing and access", () => {
     expect(await within(nav).findByRole("link", { name: "Log in" })).toBeInTheDocument();
   });
 
+  it("shows the logo in the menu, linking home, and on the landing page", async () => {
+    renderApp(createFakeAuth());
+    expect(await screen.findByRole("img", { name: "Code Wars" })).toHaveAttribute(
+      "src",
+      "/logo.png",
+    );
+    expect(screen.getByRole("link", { name: "Code Wars home" })).toHaveAttribute("href", "/");
+  });
+
   it("sends signed-out visitors from the arena to log in, then back", async () => {
     const auth = createFakeAuth();
     renderApp(auth, "/arena");
