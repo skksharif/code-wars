@@ -146,6 +146,7 @@ All are `SECURITY DEFINER` with a fixed `search_path`; `EXECUTE` is revoked from
 | `finalize_battle_if_expired(battle)` / `finalize_expired_battles()` | Time-up resolution by best_passed; draw on equal | via `finish_battle` |
 | `get_battle_state(user, battle)` | One consistent read of battle, players and (after start) the problem, using database time; resolves the battle first if its time is up | participant check |
 | `request_finalize(user, battle)` | Participant-checked time-up resolution for the client-triggered finalize route | via `finalize_battle_if_expired` |
+| `get_public_profile(username)` | Public profile for anyone, logged in or not: rating, rank, record, peak, streak, rating history, languages, wins by difficulty, last 10 battles (opponent and rating change only). Never returns email, code or problem details | read-only |
 | `sweep_stale()` | Mark stuck `judging` rows as `error`; purge stale queue rows | — |
 
 ## 4. ELO

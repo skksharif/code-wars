@@ -46,9 +46,15 @@ export function Layout({ children }: { children: ReactNode }) {
                 History
               </NavLink>
               {profile ? (
-                <span className="font-mono text-sm text-soft">
+                <NavLink
+                  to={`/u/${profile.username}`}
+                  aria-label={`Your profile, rating ${profile.rating}`}
+                  className={({ isActive }) =>
+                    `font-mono text-sm no-underline ${isActive ? "text-you" : "text-soft hover:text-ink"}`
+                  }
+                >
                   {profile.username} <span className="text-you">{profile.rating}</span>
-                </span>
+                </NavLink>
               ) : null}
               <button
                 type="button"

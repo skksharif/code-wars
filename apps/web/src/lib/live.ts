@@ -44,8 +44,35 @@ export interface HistoryEntry {
   opponent: string;
 }
 
+export interface PublicProfile {
+  username: string;
+  rating: number;
+  rank: number;
+  memberSince: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  peakRating: number;
+  streak: { result: "win" | "loss" | "draw"; count: number } | null;
+  /** Rating after each finished battle, oldest first, starting before the first one. */
+  ratingHistory: number[];
+  /** Finished battles per language. */
+  languages: Partial<Record<Language, number>>;
+  winsByDifficulty: { easy: number; medium: number; hard: number };
+  recentBattles: {
+    battleId: string;
+    result: "win" | "loss" | "draw";
+    ratingBefore: number;
+    ratingAfter: number;
+    opponent: string;
+    finishedAt: string;
+  }[];
+}
+
 /** Read-only data the browser fetches directly from Supabase under RLS. */
 export interface BattleData {
+  /** Anyone's public profile, or null if there is no such player. */
+  getPublicProfile(username: string): Promise<PublicProfile | null>;
   /** Top players by rating. Public. */
   getLeaderboard(limit: number): Promise<LeaderboardEntry[]>;
   /** The user's finished battles, newest first. */
@@ -120,8 +147,60 @@ interface OpponentRow {
   profiles: { username: string } | null;
 }
 
+interface PublicProfileRow {
+  username: string;
+  rating: number;
+  rank: number;
+  member_since: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  peak_rating: number;
+  streak: PublicProfile["streak"];
+  rating_history: number[];
+  languages: PublicProfile["languages"];
+  wins_by_difficulty: PublicProfile["winsByDifficulty"];
+  recent_battles: {
+    battle_id: string;
+    result: "win" | "loss" | "draw";
+    rating_before: number;
+    rating_after: number;
+    opponent: string | null;
+    finished_at: string;
+  }[];
+}
+
 export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
   return {
+    async getPublicProfile(username) {
+      const { data, error } = await supabase.rpc("get_public_profile", { p_username: username });
+      if (error) throw new Error("Could not load the profile.");
+      const row = data as PublicProfileRow | null;
+      if (!row) return null;
+      return {
+        username: row.username,
+        rating: row.rating,
+        rank: row.rank,
+        memberSince: row.member_since,
+        wins: row.wins,
+        losses: row.losses,
+        draws: row.draws,
+        peakRating: row.peak_rating,
+        streak: row.streak,
+        ratingHistory: row.rating_history,
+        languages: row.languages,
+        winsByDifficulty: row.wins_by_difficulty,
+        recentBattles: row.recent_battles.map((b) => ({
+          battleId: b.battle_id,
+          result: b.result,
+          ratingBefore: b.rating_before,
+          ratingAfter: b.rating_after,
+          opponent: b.opponent ?? "deleted player",
+          finishedAt: b.finished_at,
+        })),
+      };
+    },
+
     async getLeaderboard(limit) {
       const { data, error } = await supabase
         .from("leaderboard")

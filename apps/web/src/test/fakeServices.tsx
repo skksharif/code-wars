@@ -9,6 +9,7 @@ import type {
   FinalSubmission,
   HistoryEntry,
   LeaderboardEntry,
+  PublicProfile,
 } from "../lib/live";
 import { ServicesProvider, type Services } from "../services";
 import type { FakeAuth } from "./fakeAuth";
@@ -81,6 +82,7 @@ export interface FakeServices extends Services {
   solutions: FinalSubmission[];
   leaderboard: LeaderboardEntry[] | Error;
   history: HistoryEntry[] | Error;
+  profiles: Record<string, PublicProfile> | Error;
 }
 
 export function createFakeServices(): FakeServices {
@@ -90,6 +92,7 @@ export function createFakeServices(): FakeServices {
     solutions: [],
     leaderboard: [],
     history: [],
+    profiles: {},
     api: {
       joinMatchmaking: vi.fn<ApiClient["joinMatchmaking"]>(async () => ({
         status: "queued",
@@ -124,6 +127,13 @@ export function createFakeServices(): FakeServices {
     },
     data: {
       getFinalSubmissions: async () => services.solutions,
+      getPublicProfile: async (username) => {
+        if (services.profiles instanceof Error) throw services.profiles;
+        const found = Object.values(services.profiles).find(
+          (p) => p.username.toLowerCase() === username.toLowerCase(),
+        );
+        return found ?? null;
+      },
       getLeaderboard: async () => {
         if (services.leaderboard instanceof Error) throw services.leaderboard;
         return services.leaderboard;

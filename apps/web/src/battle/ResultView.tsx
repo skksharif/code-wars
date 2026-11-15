@@ -47,7 +47,9 @@ function PlayerCard({
         {outcome}
         {player.isYou ? " · you" : ""}
       </p>
-      <p className="m-0 font-display text-3xl font-bold">{player.username}</p>
+      <Link to={`/u/${player.username}`} className="font-display text-3xl font-bold text-ink">
+        {player.username}
+      </Link>
       {player.ratingAfter !== null && delta !== null ? (
         <p
           className="m-0 flex items-baseline gap-3 font-display font-bold"

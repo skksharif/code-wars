@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import type { LeaderboardEntry } from "../lib/live";
 import { useServices } from "../services";
@@ -25,7 +26,9 @@ function PodiumCard({ entry, isYou }: { entry: LeaderboardEntry; isYou: boolean 
         #{entry.rank}
         {isYou ? <span className="ml-2 text-base tracking-widest">YOU</span> : null}
       </span>
-      <span className="text-xl font-semibold">{entry.username}</span>
+      <Link to={`/u/${entry.username}`} className="text-xl font-semibold text-ink">
+        {entry.username}
+      </Link>
       <span className="font-mono text-muted">
         {entry.rating} · {record(entry)}
       </span>
@@ -100,7 +103,9 @@ export function RankingsPage() {
                           {entry.rank}
                         </td>
                         <td className="px-5 py-3.5 font-sans">
-                          {entry.username}
+                          <Link to={`/u/${entry.username}`} className="text-ink">
+                            {entry.username}
+                          </Link>
                           {isYou ? <span className="text-you"> (you)</span> : null}
                         </td>
                         <td className="px-5 py-3.5 text-right">{entry.rating}</td>

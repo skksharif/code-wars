@@ -44,7 +44,7 @@ Scheduled (Cron Trigger, every minute): `finalize_expired_battles()` and `sweep_
 | Sign up, sign in, sign out, session | Supabase Auth |
 | Username availability | RPC `is_username_available` |
 | Leaderboard | view `leaderboard` |
-| Any user's public profile | `profiles` |
+| Any user's public profile page (`/u/<username>`) | RPC `get_public_profile` (callable without logging in) |
 | Own battle history and rating history | `battles`, `battle_players`, view `rating_history` |
 | Own submissions; opponent's final submission after the battle is finished | `submissions` |
 
