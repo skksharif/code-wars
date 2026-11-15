@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import type { Profile } from "../lib/authService";
 import { Avatar } from "./Avatar";
 
 /** The brand: the clashing-brackets mark with the CODE WARS lettering below. */
@@ -82,6 +83,100 @@ function SectionBar() {
   );
 }
 
+function MenuIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
+      {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+    </svg>
+  );
+}
+
+/**
+ * Phones: a hamburger button that opens a small menu with your profile and
+ * Log out. Closes on a choice, a tap outside, Escape, or moving to a new page.
+ */
+function MobileMenu({ profile, onSignOut }: { profile: Profile | null; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+
+  useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: PointerEvent) => {
+      if (box.current && !box.current.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
+  const item =
+    "flex min-h-12 w-full items-center gap-3 px-4 text-left no-underline hover:bg-you/10";
+
+  return (
+    <div ref={box} className="relative md:hidden">
+      <button
+        type="button"
+        aria-label="Menu"
+        aria-expanded={open}
+        aria-controls="mobile-menu"
+        onClick={() => setOpen((value) => !value)}
+        className={`flex h-11 w-11 cursor-pointer items-center justify-center border bg-transparent ${
+          open ? "border-you text-you" : "border-line-strong text-soft"
+        }`}
+      >
+        <MenuIcon open={open} />
+      </button>
+      {open ? (
+        <nav
+          id="mobile-menu"
+          aria-label="Account"
+          className="absolute top-full right-0 z-30 mt-2 w-64 border border-line-strong bg-panel py-1 shadow-[0_12px_40px_rgba(0,0,0,0.7)]"
+        >
+          {profile ? (
+            <Link to={`/u/${profile.username}`} className={`${item} text-ink`}>
+              <Avatar id={profile.avatar} size={32} decorative />
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate font-display text-lg font-bold">Profile</span>
+                <span className="truncate font-mono text-sm text-muted">
+                  {profile.username} · <span className="text-you">{profile.rating}</span>
+                </span>
+              </span>
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onSignOut();
+            }}
+            className={`${item} cursor-pointer border-0 border-t border-line bg-transparent font-display text-lg font-bold text-rival`}
+          >
+            Log out
+          </button>
+        </nav>
+      ) : null}
+    </div>
+  );
+}
+
 export function Layout({ children }: { children: ReactNode }) {
   const { status, profile, service } = useAuth();
   const navigate = useNavigate();
@@ -97,7 +192,13 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col bg-ground text-ink">
       <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2 md:px-[5%]">
         <Logo />
-        <nav aria-label="Main" className="flex items-center gap-2 md:gap-3">
+        {status === "signedIn" ? (
+          <MobileMenu profile={profile} onSignOut={() => void signOut()} />
+        ) : null}
+        <nav
+          aria-label="Main"
+          className={`items-center gap-3 ${status === "signedIn" ? "hidden md:flex" : "flex"}`}
+        >
           {status === "signedIn" ? (
             <>
               {profile ? (

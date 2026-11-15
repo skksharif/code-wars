@@ -31,6 +31,63 @@ describe("routing and access", () => {
     expect(screen.getByRole("link", { name: "Code Wars home" })).toHaveAttribute("href", "/");
   });
 
+  describe("phone menu", () => {
+    it("opens from the hamburger with Profile and Log out", async () => {
+      renderApp(createFakeAuth(TEST_USER), "/arena");
+      const toggle = await screen.findByRole("button", { name: "Menu" });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("navigation", { name: "Account" })).not.toBeInTheDocument();
+
+      await userEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      const menu = screen.getByRole("navigation", { name: "Account" });
+      const profile = await within(menu).findByRole("link", { name: /Profile/ });
+      expect(profile).toHaveAttribute("href", "/u/coder_42");
+      expect(profile).toHaveTextContent("coder_42 · 1216");
+      expect(within(menu).getByRole("button", { name: "Log out" })).toBeInTheDocument();
+    });
+
+    it("goes to your profile and closes", async () => {
+      renderApp(createFakeAuth(TEST_USER), "/arena");
+      await userEvent.click(await screen.findByRole("button", { name: "Menu" }));
+      const menu = screen.getByRole("navigation", { name: "Account" });
+      await userEvent.click(await within(menu).findByRole("link", { name: /Profile/ }));
+      expect(await screen.findByRole("button", { name: "Menu" })).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      expect(screen.queryByRole("navigation", { name: "Account" })).not.toBeInTheDocument();
+    });
+
+    it("logs out from the menu", async () => {
+      const auth = createFakeAuth(TEST_USER);
+      renderApp(auth, "/arena");
+      await userEvent.click(await screen.findByRole("button", { name: "Menu" }));
+      const menu = screen.getByRole("navigation", { name: "Account" });
+      await userEvent.click(within(menu).getByRole("button", { name: "Log out" }));
+      expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
+      expect(auth.signOut).toHaveBeenCalled();
+    });
+
+    it("closes on Escape or a tap outside", async () => {
+      renderApp(createFakeAuth(TEST_USER), "/arena");
+      const toggle = await screen.findByRole("button", { name: "Menu" });
+      await userEvent.click(toggle);
+      await userEvent.keyboard("{Escape}");
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+      await userEvent.click(toggle);
+      await userEvent.click(screen.getByRole("heading", { level: 1 }));
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("is not shown to visitors", async () => {
+      renderApp(createFakeAuth());
+      await screen.findByRole("form", { name: "Create account" });
+      expect(screen.queryByRole("button", { name: "Menu" })).not.toBeInTheDocument();
+    });
+  });
+
   it("puts Arena and Rankings in the bottom bar for signed-in players", async () => {
     renderApp(createFakeAuth(TEST_USER), "/arena");
     const tabs = await screen.findByRole("navigation", { name: "Sections" });
