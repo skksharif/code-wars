@@ -71,7 +71,13 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { username } },
+        options: {
+          data: { username },
+          // Send the confirmation link back to this site. Supabase only honours it
+          // if the address is in Authentication > URL Configuration > Redirect URLs;
+          // otherwise it falls back to the project's Site URL.
+          emailRedirectTo: `${window.location.origin}/`,
+        },
       });
       if (error) throw new AuthError(friendly(error.message, "Could not create the account."));
       return { needsEmailConfirmation: !data.session };
