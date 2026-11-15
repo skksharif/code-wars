@@ -90,14 +90,20 @@ describe("rankings", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the rankings");
   });
 
-  it("is linked from the navigation for everyone", async () => {
-    renderWithApp(createFakeAuth(), services, "/");
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    expect(within(nav).getByRole("link", { name: "Rankings" })).toHaveAttribute(
+  it("is linked from the bottom bar for players and the landing page for visitors", async () => {
+    const first = renderWithApp(createFakeAuth(TEST_USER), services, "/arena");
+    const tabs = await screen.findByRole("navigation", { name: "Sections" });
+    expect(within(tabs).getByRole("link", { name: "Rankings" })).toHaveAttribute(
       "href",
       "/rankings",
     );
-    expect(within(nav).queryByRole("link", { name: "History" })).not.toBeInTheDocument();
+    first.unmount();
+
+    renderWithApp(createFakeAuth(), services, "/");
+    expect(await screen.findByRole("link", { name: "See the rankings" })).toHaveAttribute(
+      "href",
+      "/rankings",
+    );
   });
 });
 

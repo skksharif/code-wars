@@ -3,33 +3,19 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Avatar } from "./Avatar";
 
-/** The brand: the clashing-brackets mark beside the CODE WARS lettering. */
+/** The brand: the clashing-brackets mark with the CODE WARS lettering below. */
 export function Logo() {
   return (
     <Link
       to="/"
       aria-label="Code Wars home"
-      className="flex flex-none items-center gap-2 no-underline md:gap-2.5"
+      className="flex flex-none flex-col items-center gap-1 no-underline"
     >
-      <img src="/logo-mark.png" alt="" width={55} height={36} className="block h-8 w-auto md:h-9" />
-      <img
-        src="/logo-wordmark.png"
-        alt=""
-        width={144}
-        height={18}
-        className="block h-[15px] w-auto md:h-[18px]"
-      />
+      <img src="/logo-mark.png" alt="" width={55} height={36} className="block h-8 w-auto" />
+      <img src="/logo-wordmark.png" alt="" width={112} height={14} className="block h-3.5 w-auto" />
     </Link>
   );
 }
-
-/** Top-bar links. On phones they move to the bottom tab bar unless `onPhones`. */
-const navLink =
-  (onPhones = false) =>
-  ({ isActive }: { isActive: boolean }) =>
-    `${onPhones ? "inline-block" : "hidden md:inline-block"} border-b-2 py-3 font-display font-semibold tracking-widest uppercase no-underline ${
-      isActive ? "border-you text-you" : "border-transparent text-muted hover:text-ink"
-    }`;
 
 function ArenaIcon() {
   return (
@@ -69,19 +55,20 @@ function RankingsIcon() {
 
 const tabLink = ({ isActive }: { isActive: boolean }) =>
   `flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 border-t-2 font-display text-xs font-semibold tracking-widest uppercase no-underline ${
-    isActive ? "border-you text-you" : "border-transparent text-muted"
+    isActive ? "border-you text-you" : "border-transparent text-muted hover:text-ink"
   }`;
 
 /**
- * Phone navigation: a tab bar along the bottom, within reach of the thumb.
- * Hidden on wider screens, where the links sit in the top bar, and during
- * battles, where every pixel goes to the problem and the editor.
+ * Arena and Rankings live in a tab bar along the bottom, keeping the top bar
+ * to just your profile and Log out. Full width on phones (within reach of the
+ * thumb), a small centred bar on wide screens, and hidden during battles so
+ * every pixel goes to the problem and the editor.
  */
-function MobileTabBar({ username, avatar }: { username: string; avatar: string }) {
+function SectionBar() {
   return (
     <nav
       aria-label="Sections"
-      className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-panel pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-panel pb-[env(safe-area-inset-bottom)] md:inset-x-auto md:bottom-4 md:left-1/2 md:w-72 md:-translate-x-1/2 md:border md:pb-0 md:shadow-[0_8px_30px_rgba(0,0,0,0.6)]"
     >
       <NavLink to="/arena" className={tabLink}>
         <ArenaIcon />
@@ -91,10 +78,6 @@ function MobileTabBar({ username, avatar }: { username: string; avatar: string }
         <RankingsIcon />
         Rankings
       </NavLink>
-      <NavLink to={`/u/${username}`} className={tabLink}>
-        <Avatar id={avatar} size={24} decorative />
-        Profile
-      </NavLink>
     </nav>
   );
 }
@@ -103,7 +86,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const { status, profile, service } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const showTabBar = status === "signedIn" && profile !== null && !pathname.startsWith("/battle/");
+  const showSections = status === "signedIn" && !pathname.startsWith("/battle/");
 
   async function signOut() {
     await service.signOut();
@@ -112,18 +95,9 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-ground text-ink">
-      <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 md:px-[5%] md:py-3">
+      <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2 md:px-[5%]">
         <Logo />
-        <nav aria-label="Main" className="flex items-center gap-3 md:gap-6">
-          {status === "signedIn" ? (
-            <NavLink to="/arena" className={navLink()}>
-              Arena
-            </NavLink>
-          ) : null}
-          {/* Signed-out visitors have no tab bar, so Rankings stays up here. */}
-          <NavLink to="/rankings" className={navLink(status !== "signedIn")}>
-            Rankings
-          </NavLink>
+        <nav aria-label="Main" className="flex items-center gap-2 md:gap-3">
           {status === "signedIn" ? (
             <>
               {profile ? (
@@ -131,18 +105,22 @@ export function Layout({ children }: { children: ReactNode }) {
                   to={`/u/${profile.username}`}
                   aria-label={`Your profile, rating ${profile.rating}`}
                   className={({ isActive }) =>
-                    `inline-flex items-center gap-2 font-mono text-sm no-underline ${isActive ? "text-you" : "text-soft hover:text-ink"}`
+                    `inline-flex h-11 items-center gap-2 border px-2 font-mono text-sm no-underline md:px-3 ${
+                      isActive
+                        ? "border-you text-you"
+                        : "border-line-strong text-soft hover:border-muted hover:text-ink"
+                    }`
                   }
                 >
                   <Avatar id={profile.avatar} size={28} decorative />
-                  <span className="hidden sm:inline">{profile.username}</span>
+                  <span className="hidden max-w-40 truncate sm:inline">{profile.username}</span>
                   <span className="text-you">{profile.rating}</span>
                 </NavLink>
               ) : null}
               <button
                 type="button"
                 onClick={signOut}
-                className="h-10 cursor-pointer border border-line-strong bg-transparent px-2.5 font-display text-xs font-semibold tracking-wider whitespace-nowrap text-soft uppercase hover:border-muted md:h-11 md:px-4 md:text-base md:tracking-widest"
+                className="h-11 cursor-pointer border border-line-strong bg-transparent px-3 font-display text-sm font-semibold tracking-wider whitespace-nowrap text-soft uppercase hover:border-muted hover:text-ink md:px-4"
               >
                 Log out
               </button>
@@ -150,7 +128,7 @@ export function Layout({ children }: { children: ReactNode }) {
           ) : status === "signedOut" ? (
             <Link
               to="/login"
-              className="cut inline-flex h-10 items-center border border-you px-4 font-display font-semibold tracking-widest text-you uppercase no-underline hover:bg-you/10 md:h-11 md:px-6"
+              className="cut inline-flex h-11 items-center border border-you px-5 font-display font-semibold tracking-widest text-you uppercase no-underline hover:bg-you/10"
             >
               Log in
             </Link>
@@ -158,13 +136,11 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
       </header>
       <div
-        className={`flex flex-1 flex-col ${showTabBar ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0" : ""}`}
+        className={`flex flex-1 flex-col ${showSections ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-24" : ""}`}
       >
         {children}
       </div>
-      {showTabBar && profile ? (
-        <MobileTabBar username={profile.username} avatar={profile.avatar} />
-      ) : null}
+      {showSections ? <SectionBar /> : null}
     </div>
   );
 }

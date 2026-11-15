@@ -64,6 +64,10 @@ export function LandingPage() {
           <Link to="/login" className="text-you">
             Log in
           </Link>
+          {" · "}
+          <Link to="/rankings" className="text-you">
+            See the rankings
+          </Link>
         </p>
       </Panel>
     </main>

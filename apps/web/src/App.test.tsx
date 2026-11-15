@@ -31,7 +31,7 @@ describe("routing and access", () => {
     expect(screen.getByRole("link", { name: "Code Wars home" })).toHaveAttribute("href", "/");
   });
 
-  it("gives signed-in players a bottom tab bar for phones", async () => {
+  it("puts Arena and Rankings in the bottom bar for signed-in players", async () => {
     renderApp(createFakeAuth(TEST_USER), "/arena");
     const tabs = await screen.findByRole("navigation", { name: "Sections" });
     expect(within(tabs).getByRole("link", { name: "Arena" })).toHaveAttribute("href", "/arena");
@@ -39,11 +39,7 @@ describe("routing and access", () => {
       "href",
       "/rankings",
     );
-    expect(within(tabs).getByRole("link", { name: "Profile" })).toHaveAttribute(
-      "href",
-      "/u/coder_42",
-    );
-    expect(tabs).toHaveClass("md:hidden");
+    expect(within(tabs).getAllByRole("link")).toHaveLength(2);
   });
 
   it("has no bottom tab bar for visitors", async () => {
@@ -71,7 +67,15 @@ describe("routing and access", () => {
     expect(await screen.findByText("coder_42", { selector: "h1" })).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Main" });
     await waitFor(() => expect(nav).toHaveTextContent("1216"));
-    expect(nav).toHaveTextContent("Arena");
+  });
+
+  it("keeps the top bar to your profile and Log out", async () => {
+    renderApp(createFakeAuth(TEST_USER), "/arena");
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    const profile = await within(nav).findByRole("link", { name: "Your profile, rating 1216" });
+    expect(profile).toHaveAttribute("href", "/u/coder_42");
+    expect(within(nav).getAllByRole("link")).toHaveLength(1);
+    expect(within(nav).getByRole("button", { name: "Log out" })).toBeInTheDocument();
   });
 
   it("logs out and returns to the landing page", async () => {
