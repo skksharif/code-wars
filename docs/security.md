@@ -41,6 +41,7 @@ Last updated: 2026-11-14
 | Leaking internals | Generic 500 responses; details only in Worker logs |
 | XSS through problem statements or usernames | Markdown rendered with sanitisation; usernames restricted to `[A-Za-z0-9_]` |
 | Eavesdropping on presence | Private Realtime channel restricted to participants |
+| Abusing the site-wide "players online" channel | Private channel `lobby`: signed-in players only, presence only (no broadcast), so it cannot carry messages; it reveals only a count of user ids, never names |
 
 ## 4. Accepted risks for the MVP (need your awareness)
 
@@ -51,7 +52,7 @@ Last updated: 2026-11-14
 5. **Free-tier rate limiting only.** A determined attacker could exhaust the daily judge quota or the 100,000 Worker requests; this causes downtime, not data loss or cost.
 
 6. **Hidden tests live in the repository** (`supabase/seed/problems.ts` and the generated `seed.sql`). The GitHub repository must stay private, or anyone can read the hidden tests and reference solutions. Product owner decision 2026-11-14 was a private repository; **superseded 2026-11-15: the product owner chose a public repository (github.com/skksharif/code-wars) and accepted that hidden tests and reference solutions are publicly readable.** **Mitigated 2026-11-15:** randomised hidden tests are now derived from a secret salt (`HIDDEN_TEST_SALT`, kept only in the git-ignored `apps/worker/.dev.vars`), the generated seed is written to the git-ignored `supabase/seed/.generated/`, and the live database was reseeded. Every problem has at least one secret test, so passing all hidden tests needs a real solution. Still public: the problem statements, samples, reference solutions and 45 small hand-written edge cases; the old tests remain in git history but no longer match the live database.
-7. **Realtime policies verified 2026-11-15** on the real project: both players can join the private presence channel and an outsider is refused.
+7. **Realtime policies verified 2026-11-15** on the real project: both players can join the private presence channel and an outsider is refused. **Lobby verified 2026-11-16**: a signed-in player joins `lobby` and is counted; an anonymous client is refused ("You do not have permissions to read from this Channel topic: lobby").
 9. **Keys were shared in a chat on 2026-11-15** (Supabase secret key and database password). They should be rotated before any public launch.
 
 8. **The mock judge accepts any code.** `JUDGE_PROVIDER` has no default and the Worker refuses to start judging without it, but `wrangler.jsonc` currently sets it to `mock` for development. It must be changed to `judge0` at Gate 6.

@@ -57,6 +57,7 @@ Scheduled (Cron Trigger, every minute): `finalize_expired_battles()` and `sweep_
 | `battle_players` rows, filter `battle_id=eq.<battleId>` | Postgres Changes | attempts, best_passed, language, result, rating_after | participants (RLS) |
 | `battle_players` inserts, filter `user_id=eq.<me>` | Postgres Changes | new battle id | the matched user |
 | `battle:<battleId>` | Presence (private channel) | online/offline | participants |
+| `lobby` | Presence only (private channel), keyed by user id | players online count shown in the arena | any signed-in player |
 
 Clients never send authoritative data over Realtime.
 

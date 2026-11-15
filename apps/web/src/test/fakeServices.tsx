@@ -80,6 +80,8 @@ export interface FakeServices extends Services {
   api: { [K in keyof ApiClient]: ReturnType<typeof vi.fn<ApiClient[K]>> };
   /** Handlers registered by the battle page, to simulate live events. */
   watchers: BattleWatchHandlers[];
+  /** Who is in the site-wide lobby, and how to tell them the online count. */
+  lobby: { userId: string; onCount: (count: number) => void }[];
   solutions: FinalSubmission[];
   leaderboard: LeaderboardEntry[] | Error;
   history: HistoryEntry[] | Error;
@@ -88,8 +90,10 @@ export interface FakeServices extends Services {
 
 export function createFakeServices(): FakeServices {
   const watchers: BattleWatchHandlers[] = [];
+  const lobby: FakeServices["lobby"] = [];
   const services: FakeServices = {
     watchers,
+    lobby,
     solutions: [],
     leaderboard: [],
     history: [],
@@ -124,6 +128,13 @@ export function createFakeServices(): FakeServices {
         watchers.push(handlers);
         return () => {
           watchers.splice(watchers.indexOf(handlers), 1);
+        };
+      },
+      joinLobby: (userId, onCount) => {
+        const member = { userId, onCount };
+        lobby.push(member);
+        return () => {
+          lobby.splice(lobby.indexOf(member), 1);
         };
       },
     },

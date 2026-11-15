@@ -11,6 +11,12 @@ export interface BattleWatchHandlers {
 /** Live updates for a battle. Only a hint to refetch: never a source of truth. */
 export interface LiveService {
   watchBattle(battleId: string, userId: string, handlers: BattleWatchHandlers): () => void;
+  /**
+   * Join the site-wide lobby as `userId` and report how many players are
+   * connected (each player once, however many tabs). Returns a function that
+   * leaves the lobby.
+   */
+  joinLobby(userId: string, onCount: (count: number) => void): () => void;
 }
 
 export interface FinalSubmission {
@@ -122,6 +128,22 @@ export function createSupabaseLive(supabase: SupabaseClient): LiveService {
       return () => {
         void supabase.removeChannel(changes);
         void supabase.removeChannel(presence);
+      };
+    },
+
+    joinLobby(userId, onCount) {
+      const lobby = supabase.channel("lobby", {
+        config: { private: true, presence: { key: userId } },
+      });
+      lobby
+        .on("presence", { event: "sync" }, () => {
+          onCount(Object.keys(lobby.presenceState()).length);
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") void lobby.track({ online: true });
+        });
+      return () => {
+        void supabase.removeChannel(lobby);
       };
     },
   };

@@ -145,12 +145,15 @@ describe("routing and access", () => {
     expect(within(nav).getByRole("button", { name: "Log out" })).toBeInTheDocument();
   });
 
-  it("logs out and returns to the landing page", async () => {
+  it("logs out and returns to the landing page, leaving the online lobby", async () => {
     const auth = createFakeAuth(TEST_USER);
-    renderApp(auth, "/arena");
+    const services = createFakeServices();
+    renderWithApp(auth, services, "/arena");
+    await waitFor(() => expect(services.lobby).toHaveLength(1));
     await userEvent.click(await screen.findByRole("button", { name: "Log out" }));
     expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
     expect(auth.signOut).toHaveBeenCalled();
+    expect(services.lobby).toHaveLength(0);
   });
 
   it("shows a not-found page for unknown addresses", async () => {

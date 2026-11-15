@@ -93,6 +93,54 @@ describe("lobby", () => {
   });
 });
 
+describe("players online", () => {
+  const announce = (count: number) =>
+    act(() => {
+      for (const member of services.lobby) member.onCount(count);
+    });
+
+  it("joins the lobby when signed in and shows the count in the arena", async () => {
+    open("/arena");
+    await waitFor(() => expect(services.lobby.map((m) => m.userId)).toEqual(["user-1"]));
+    // Hidden until the first count arrives.
+    expect(screen.queryByText(/online/)).not.toBeInTheDocument();
+
+    announce(3);
+    expect(await screen.findByLabelText("3 players online")).toBeInTheDocument();
+    announce(1);
+    expect(await screen.findByLabelText("1 player online")).toBeInTheDocument();
+  });
+
+  it("stays in the lobby during a battle", async () => {
+    open(`/battle/${BATTLE_ID}`);
+    await screen.findByRole("timer");
+    expect(services.lobby).toHaveLength(1);
+  });
+
+  it("does not join for visitors", async () => {
+    renderWithApp(createFakeAuth(), services, "/rankings");
+    await screen.findByRole("heading", { name: "Global rankings" });
+    expect(services.lobby).toHaveLength(0);
+  });
+
+  it("shows the count on phones too", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) =>
+        ({ matches: query === "(max-width: 767px)", media: query }) as MediaQueryList,
+    );
+    try {
+      open("/arena");
+      await screen.findByRole("region", { name: "Your rating" });
+      await waitFor(() => expect(services.lobby).toHaveLength(1));
+      announce(5);
+      expect(await screen.findByLabelText("5 players online")).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("lobby on phones", () => {
   beforeEach(() => {
     vi.stubGlobal(

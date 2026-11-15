@@ -7,6 +7,7 @@ import { Button } from "../components/ui";
 import { ApiError } from "../lib/api";
 import { useServices } from "../services";
 import { Avatar } from "../components/Avatar";
+import { OnlineBadge } from "../lib/online";
 import { nextTier, tierFor } from "../lib/tiers";
 import { PHONE_QUERY, useMediaQuery } from "../lib/useMediaQuery";
 
@@ -131,6 +132,9 @@ export function ArenaPage() {
 
   return (
     <main className="flex flex-1 flex-col justify-center gap-6 px-4 py-6 md:gap-8 md:px-[5%] md:py-12">
+      <div className="flex justify-center">
+        <OnlineBadge />
+      </div>
       <section className="flex flex-wrap items-stretch justify-center gap-5 md:gap-8">
         <div className="glow-you flex max-w-sm min-w-0 flex-1 basis-72 flex-col gap-2 border border-you bg-panel p-5 md:p-7">
           <p className="m-0 font-mono text-xs tracking-widest text-you uppercase">You</p>
@@ -296,6 +300,7 @@ function PhoneArena({
       </section>
 
       <section className="flex flex-1 flex-col items-center justify-center gap-4 py-2">
+        <OnlineBadge />
         {searching ? (
           <div
             role="status"
