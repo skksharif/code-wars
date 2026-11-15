@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import type { BattlePlayer, BattleState } from "../lib/api";
 import type { FinalSubmission } from "../lib/live";
 import { useServices } from "../services";
+import { Avatar } from "../components/Avatar";
 
 function reasonText(state: BattleState, you: BattlePlayer, rival: BattlePlayer): string {
   const youWon = you.result === "win";
@@ -47,7 +48,16 @@ function PlayerCard({
         {outcome}
         {player.isYou ? " · you" : ""}
       </p>
-      <Link to={`/u/${player.username}`} className="font-display text-3xl font-bold text-ink">
+      <Link
+        to={`/u/${player.username}`}
+        className={`flex items-center gap-3 font-display text-3xl font-bold text-ink no-underline ${side === "rival" ? "flex-row-reverse" : ""}`}
+      >
+        <Avatar
+          id={player.avatar}
+          size={56}
+          frame={side === "you" ? "#22E6FF" : "#FF2E9A"}
+          decorative
+        />
         {player.username}
       </Link>
       {player.ratingAfter !== null && delta !== null ? (

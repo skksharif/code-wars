@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { AuthError } from "./lib/authService";
@@ -16,7 +16,10 @@ describe("routing and access", () => {
     renderApp(createFakeAuth());
     expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Code. Clash. Climb.");
-    expect(screen.getByRole("navigation", { name: "Main" })).toHaveTextContent("Log in");
+    // The page renders before the login check finishes; the menu's Log in
+    // button appears once it has, so wait for it rather than checking at once.
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    expect(await within(nav).findByRole("link", { name: "Log in" })).toBeInTheDocument();
   });
 
   it("sends signed-out visitors from the arena to log in, then back", async () => {

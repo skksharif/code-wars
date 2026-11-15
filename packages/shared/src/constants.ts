@@ -59,3 +59,23 @@ export function matchWindow(waitedMs: number): number {
   const steps = Math.floor(Math.max(0, waitedMs) / LIMITS.matchWindowStepMs);
   return LIMITS.matchWindowStart + steps * LIMITS.matchWindowStep;
 }
+
+/** The six built-in avatars. Ids match the database check constraint. */
+export const AVATARS = ["cipher", "kernel", "vector", "nova", "pixel", "echo"] as const;
+export type AvatarId = (typeof AVATARS)[number];
+
+export const AVATAR_INFO: Record<
+  AvatarId,
+  { name: string; group: "male" | "female"; look: string }
+> = {
+  cipher: { name: "Cipher", group: "male", look: "short spiky hair and headphones" },
+  kernel: { name: "Kernel", group: "male", look: "a beanie and a beard" },
+  vector: { name: "Vector", group: "male", look: "swept hair and square glasses" },
+  nova: { name: "Nova", group: "female", look: "long hair and a light visor" },
+  pixel: { name: "Pixel", group: "female", look: "two hair buns and a headset" },
+  echo: { name: "Echo", group: "female", look: "a bob haircut and round glasses" },
+};
+
+export function isAvatarId(value: unknown): value is AvatarId {
+  return typeof value === "string" && (AVATARS as readonly string[]).includes(value);
+}

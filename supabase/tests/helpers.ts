@@ -1,27 +1,19 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { expect } from "vitest";
-import { buildSeedSql } from "../seed/generate.ts";
+import { buildTestDatabase, TEST_SNAPSHOT_PATH } from "./global-setup.ts";
+import { TEST_SALT } from "./test-salt.ts";
 
-/** Fixed salt for tests only. Production uses a secret salt (see generate.ts). */
-export const TEST_SALT = "test-salt-not-used-in-production";
+export { TEST_SALT };
 
-const SUPABASE_DIR = join(import.meta.dirname, "..");
-const MIGRATIONS_DIR = join(SUPABASE_DIR, "migrations");
-
-/** Fresh in-process Postgres with the Supabase stub, all migrations and the seed applied. */
+/**
+ * Fresh in-process Postgres with the Supabase stub, all migrations and the
+ * test seed. Starts from the snapshot made once per run by global-setup.ts;
+ * builds from scratch only if that snapshot is missing.
+ */
 export async function createDb(): Promise<PGlite> {
-  const db = new PGlite();
-  await db.exec(readFileSync(join(import.meta.dirname, "supabase-stub.sql"), "utf8"));
-  const migrations = readdirSync(MIGRATIONS_DIR)
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
-  for (const name of migrations) {
-    await db.exec(readFileSync(join(MIGRATIONS_DIR, name), "utf8"));
-  }
-  await db.exec(buildSeedSql(TEST_SALT));
-  return db;
+  if (!existsSync(TEST_SNAPSHOT_PATH)) return buildTestDatabase();
+  return new PGlite({ loadDataDir: new Blob([readFileSync(TEST_SNAPSHOT_PATH)]) });
 }
 
 /** Removes all users and battle data; keeps problems. */

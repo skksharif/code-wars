@@ -15,6 +15,7 @@ afterEach(cleanup);
 const entry = (rank: number, id: string, username: string, rating: number): LeaderboardEntry => ({
   id,
   username,
+  avatar: "vector",
   rating,
   wins: rank,
   losses: 1,

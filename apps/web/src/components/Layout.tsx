@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { Avatar } from "./Avatar";
 
 export function Logo() {
   return (
@@ -50,10 +51,11 @@ export function Layout({ children }: { children: ReactNode }) {
                   to={`/u/${profile.username}`}
                   aria-label={`Your profile, rating ${profile.rating}`}
                   className={({ isActive }) =>
-                    `font-mono text-sm no-underline ${isActive ? "text-you" : "text-soft hover:text-ink"}`
+                    `inline-flex items-center gap-2 font-mono text-sm no-underline ${isActive ? "text-you" : "text-soft hover:text-ink"}`
                   }
                 >
-                  {profile.username} <span className="text-you">{profile.rating}</span>
+                  <Avatar id={profile.avatar} size={28} decorative /> {profile.username}{" "}
+                  <span className="text-you">{profile.rating}</span>
                 </NavLink>
               ) : null}
               <button

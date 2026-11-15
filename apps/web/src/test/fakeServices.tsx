@@ -22,6 +22,7 @@ export function player(overrides: Partial<BattlePlayer> = {}): BattlePlayer {
   return {
     userId: "user-1",
     username: "coder_42",
+    avatar: "nova",
     isYou: true,
     language: null,
     attempts: 0,
@@ -115,6 +116,7 @@ export function createFakeServices(): FakeServices {
         battleFinished: false,
       })),
       forfeit: vi.fn<ApiClient["forfeit"]>(async () => undefined),
+      setAvatar: vi.fn<ApiClient["setAvatar"]>(async () => undefined),
       finalize: vi.fn<ApiClient["finalize"]>(async () => true),
     },
     live: {

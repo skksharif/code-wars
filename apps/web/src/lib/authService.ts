@@ -7,6 +7,7 @@ export interface AuthUser {
 
 export interface Profile {
   username: string;
+  avatar: string;
   rating: number;
   wins: number;
   losses: number;
@@ -105,7 +106,7 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
     async getProfile(userId) {
       const { data } = await supabase
         .from("profiles")
-        .select("username, rating, wins, losses, draws")
+        .select("username, avatar, rating, wins, losses, draws")
         .eq("id", userId)
         .maybeSingle();
       return (data as Profile | null) ?? null;

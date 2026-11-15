@@ -1,6 +1,7 @@
 import { LANGUAGE_LABELS } from "@code-wars/shared";
 import type { BattlePlayer } from "../lib/api";
 import { formatClock, type BattlePhase } from "./useBattle";
+import { Avatar } from "../components/Avatar";
 
 function Segments({
   player,
@@ -60,7 +61,8 @@ export function VersusBar({
     <header className="flex flex-wrap items-center gap-5 border-b border-line bg-panel px-6 py-3">
       <div className="flex min-w-0 flex-1 basis-72 flex-col gap-1.5">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="font-display text-xl font-bold text-you">
+          <span className="flex items-center gap-2 font-display text-xl font-bold text-you">
+            <Avatar id={you.avatar} size={32} frame="#22E6FF" decorative />
             {you.username}{" "}
             <span className="font-mono text-sm font-normal text-muted">{meta(you, null)}</span>
           </span>
@@ -87,11 +89,12 @@ export function VersusBar({
           <span className="font-mono">
             {rival.bestPassed} / {totalTests}
           </span>
-          <span className="text-right font-display text-xl font-bold text-rival">
+          <span className="flex items-center justify-end gap-2 text-right font-display text-xl font-bold text-rival">
             <span className="font-mono text-sm font-normal text-muted">
               {meta(rival, rivalOnline)}
             </span>{" "}
             {rival.username}
+            <Avatar id={rival.avatar} size={32} frame="#FF2E9A" decorative />
           </span>
         </div>
         <Segments player={rival} total={totalTests} side="rival" />

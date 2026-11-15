@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ApiError } from "../lib/api";
 import type { PublicProfile } from "../lib/live";
 import { nextTier, tierFor } from "../lib/tiers";
 import { createFakeAuth, TEST_USER } from "../test/fakeAuth";
@@ -12,6 +13,7 @@ const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString
 
 const SHARIF: PublicProfile = {
   username: "sharif",
+  avatar: "kernel",
   rating: 1342,
   rank: 7,
   memberSince: "2026-11-01T00:00:00Z",
@@ -30,6 +32,7 @@ const SHARIF: PublicProfile = {
       ratingBefore: 1326,
       ratingAfter: 1342,
       opponent: "byte_rival",
+      opponentAvatar: "pixel",
       finishedAt: hoursAgo(2),
     },
     {
@@ -38,6 +41,7 @@ const SHARIF: PublicProfile = {
       ratingBefore: 1340,
       ratingAfter: 1326,
       opponent: "stack_sage",
+      opponentAvatar: "echo",
       finishedAt: hoursAgo(30),
     },
   ],
@@ -165,7 +169,16 @@ describe("profile page", () => {
   it("is reachable from your name in the menu and from the rankings", async () => {
     services.profiles = { me: { ...SHARIF, username: "coder_42" } };
     services.leaderboard = [
-      { id: "u-a", username: "sharif", rating: 1342, wins: 15, losses: 8, draws: 1, rank: 1 },
+      {
+        id: "u-a",
+        username: "sharif",
+        avatar: "kernel",
+        rating: 1342,
+        wins: 15,
+        losses: 8,
+        draws: 1,
+        rank: 1,
+      },
     ];
     renderWithApp(createFakeAuth(TEST_USER), services, "/rankings");
 
@@ -179,5 +192,75 @@ describe("profile page", () => {
     expect(
       await screen.findByRole("article", { name: "Player card for coder_42" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("avatars", () => {
+  it("shows the player's avatar on the card instead of a letter", async () => {
+    renderWithApp(createFakeAuth(), services, "/u/sharif");
+    const card = await screen.findByRole("article", { name: "Player card for sharif" });
+    expect(
+      within(card).getByRole("img", { name: "Kernel avatar: a beanie and a beard" }),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to a default avatar for unknown values", async () => {
+    services.profiles = { odd: { ...SHARIF, username: "odd", avatar: "dragon" } };
+    renderWithApp(createFakeAuth(), services, "/u/odd");
+    const card = await screen.findByRole("article");
+    expect(within(card).getByRole("img", { name: /^Cipher avatar/ })).toBeInTheDocument();
+  });
+
+  it("offers no avatar picker on someone else's profile", async () => {
+    renderWithApp(createFakeAuth(TEST_USER), services, "/u/sharif");
+    await screen.findByRole("article");
+    expect(screen.queryByRole("button", { name: "Change avatar" })).not.toBeInTheDocument();
+  });
+
+  it("lets players choose and save a new avatar on their own profile", async () => {
+    services.profiles = { me: { ...SHARIF, username: "coder_42", avatar: "nova" } };
+    const auth = createFakeAuth(TEST_USER);
+    renderWithApp(auth, services, "/u/coder_42");
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Change avatar" }));
+    const picker = screen.getByRole("region", { name: "Choose your avatar" });
+    const options = within(picker).getAllByRole("radio");
+    expect(options.map((o) => o.getAttribute("aria-label"))).toEqual([
+      "Cipher",
+      "Kernel",
+      "Vector",
+      "Nova",
+      "Pixel",
+      "Echo",
+    ]);
+    expect(within(picker).getByRole("radio", { name: "Nova" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(within(picker).getByRole("button", { name: "Save avatar" })).toBeDisabled();
+
+    await user.click(within(picker).getByRole("radio", { name: "Echo" }));
+    services.profiles = { me: { ...SHARIF, username: "coder_42", avatar: "echo" } };
+    await user.click(within(picker).getByRole("button", { name: "Save avatar" }));
+
+    expect(services.api.setAvatar).toHaveBeenCalledWith("echo");
+    expect(await screen.findByRole("img", { name: /^Echo avatar/ })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Choose your avatar" })).not.toBeInTheDocument();
+    expect(auth.getProfile).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows an error and keeps the picker open if saving fails", async () => {
+    services.profiles = { me: { ...SHARIF, username: "coder_42", avatar: "nova" } };
+    services.api.setAvatar.mockRejectedValue(
+      new ApiError("NETWORK", "Could not reach the server.", 0),
+    );
+    renderWithApp(createFakeAuth(TEST_USER), services, "/u/coder_42");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Change avatar" }));
+    await user.click(screen.getByRole("radio", { name: "Pixel" }));
+    await user.click(screen.getByRole("button", { name: "Save avatar" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not reach the server.");
+    expect(screen.getByRole("region", { name: "Choose your avatar" })).toBeInTheDocument();
   });
 });

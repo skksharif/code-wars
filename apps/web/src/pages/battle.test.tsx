@@ -133,7 +133,8 @@ describe("battle room", () => {
 
   it("holds the problem back during the get-ready countdown, then reveals it", async () => {
     const waiting = battleState({ problem: null });
-    waiting.battle.startsAt = iso(150);
+    // Long enough that a slow test run still sees the countdown before the start.
+    waiting.battle.startsAt = iso(2000);
     services.api.getBattle.mockResolvedValueOnce(waiting).mockResolvedValue(battleState());
     openBattle();
 
@@ -200,11 +201,11 @@ describe("battle room", () => {
 
   it("re-enables Submit when the cooldown ends", async () => {
     services.api.submit.mockRejectedValue(
-      new ApiError("COOLDOWN", "Wait 1 second before trying again.", 429, 300),
+      new ApiError("COOLDOWN", "Wait 2 seconds before trying again.", 429, 2000),
     );
     openBattle();
     await userEvent.click(await screen.findByRole("button", { name: "Submit" }));
-    expect(await screen.findByRole("button", { name: "Submit (1s)" })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: /^Submit \([12]s\)$/ })).toBeDisabled();
     expect(await screen.findByRole("button", { name: "Submit" })).toBeEnabled();
   });
 

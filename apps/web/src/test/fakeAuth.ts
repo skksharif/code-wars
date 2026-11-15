@@ -9,6 +9,7 @@ export interface FakeAuth extends AuthService {
 export const TEST_USER: AuthUser = { id: "user-1", email: "a@example.test" };
 export const TEST_PROFILE: Profile = {
   username: "coder_42",
+  avatar: "nova",
   rating: 1216,
   wins: 1,
   losses: 0,

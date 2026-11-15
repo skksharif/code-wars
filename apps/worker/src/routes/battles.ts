@@ -26,6 +26,7 @@ interface BattleStateRow {
   players: {
     user_id: string;
     username: string;
+    avatar: string;
     is_you: boolean;
     language: string | null;
     attempts: number;
@@ -67,6 +68,7 @@ export function registerBattleRoutes(app: Hono<AppContext>): void {
       players: state.players.map((p) => ({
         userId: p.user_id,
         username: p.username,
+        avatar: p.avatar,
         isYou: p.is_you,
         language: p.language,
         attempts: p.attempts,

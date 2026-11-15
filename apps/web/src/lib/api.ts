@@ -20,6 +20,7 @@ export type MatchmakingStatus =
 export interface BattlePlayer {
   userId: string;
   username: string;
+  avatar: string;
   isYou: boolean;
   language: Language | null;
   attempts: number;
@@ -77,6 +78,7 @@ export interface ApiClient {
   run(battleId: string, language: Language, code: string): Promise<RunResult>;
   submit(battleId: string, language: Language, code: string): Promise<SubmitResult>;
   forfeit(battleId: string): Promise<void>;
+  setAvatar(avatar: string): Promise<void>;
   finalize(battleId: string): Promise<boolean>;
 }
 
@@ -144,6 +146,9 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request("POST", `/api/battles/${id}/submit`, { language, code }),
     forfeit: async (id) => {
       await request("POST", `/api/battles/${id}/forfeit`);
+    },
+    setAvatar: async (avatar) => {
+      await request("POST", "/api/profile/avatar", { avatar });
     },
     finalize: async (id) =>
       (await request<{ finished: boolean }>("POST", `/api/battles/${id}/finalize`)).finished,

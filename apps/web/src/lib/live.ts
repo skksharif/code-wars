@@ -25,6 +25,7 @@ export interface FinalSubmission {
 export interface LeaderboardEntry {
   id: string;
   username: string;
+  avatar: string;
   rating: number;
   wins: number;
   losses: number;
@@ -46,6 +47,7 @@ export interface HistoryEntry {
 
 export interface PublicProfile {
   username: string;
+  avatar: string;
   rating: number;
   rank: number;
   memberSince: string;
@@ -65,6 +67,7 @@ export interface PublicProfile {
     ratingBefore: number;
     ratingAfter: number;
     opponent: string;
+    opponentAvatar: string;
     finishedAt: string;
   }[];
 }
@@ -149,6 +152,7 @@ interface OpponentRow {
 
 interface PublicProfileRow {
   username: string;
+  avatar: string;
   rating: number;
   rank: number;
   member_since: string;
@@ -166,6 +170,7 @@ interface PublicProfileRow {
     rating_before: number;
     rating_after: number;
     opponent: string | null;
+    opponent_avatar: string | null;
     finished_at: string;
   }[];
 }
@@ -179,6 +184,7 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
       if (!row) return null;
       return {
         username: row.username,
+        avatar: row.avatar,
         rating: row.rating,
         rank: row.rank,
         memberSince: row.member_since,
@@ -196,6 +202,7 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
           ratingBefore: b.rating_before,
           ratingAfter: b.rating_after,
           opponent: b.opponent ?? "deleted player",
+          opponentAvatar: b.opponent_avatar ?? "cipher",
           finishedAt: b.finished_at,
         })),
       };
@@ -204,7 +211,7 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
     async getLeaderboard(limit) {
       const { data, error } = await supabase
         .from("leaderboard")
-        .select("id, username, rating, wins, losses, draws, rank")
+        .select("id, username, avatar, rating, wins, losses, draws, rank")
         .order("rating", { ascending: false })
         .order("username")
         .limit(limit);

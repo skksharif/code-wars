@@ -6,6 +6,7 @@ import { formatClock } from "../battle/useBattle";
 import { Button } from "../components/ui";
 import { ApiError } from "../lib/api";
 import { useServices } from "../services";
+import { Avatar } from "../components/Avatar";
 
 type Search =
   | { status: "checking" }
@@ -98,7 +99,10 @@ export function ArenaPage() {
       <section className="flex flex-wrap items-stretch justify-center gap-8">
         <div className="glow-you flex max-w-sm min-w-0 flex-1 basis-72 flex-col gap-2 border border-you bg-panel p-7">
           <p className="m-0 font-mono text-xs tracking-widest text-you uppercase">You</p>
-          <h1 className="m-0 font-display text-4xl font-bold">{profile?.username ?? "Player"}</h1>
+          <h1 className="m-0 flex items-center gap-3 font-display text-4xl font-bold">
+            {profile ? <Avatar id={profile.avatar} size={56} frame="#22E6FF" decorative /> : null}
+            {profile?.username ?? "Player"}
+          </h1>
           <p className="text-glow-you m-0 font-display text-7xl leading-none font-bold text-you">
             {rating}
           </p>

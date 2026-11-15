@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import type { LeaderboardEntry } from "../lib/live";
 import { useServices } from "../services";
+import { Avatar } from "../components/Avatar";
 
 const TOP = 50;
 
@@ -26,7 +27,11 @@ function PodiumCard({ entry, isYou }: { entry: LeaderboardEntry; isYou: boolean 
         #{entry.rank}
         {isYou ? <span className="ml-2 text-base tracking-widest">YOU</span> : null}
       </span>
-      <Link to={`/u/${entry.username}`} className="text-xl font-semibold text-ink">
+      <Link
+        to={`/u/${entry.username}`}
+        className="flex items-center gap-3 text-xl font-semibold text-ink no-underline"
+      >
+        <Avatar id={entry.avatar} size={44} decorative />
         {entry.username}
       </Link>
       <span className="font-mono text-muted">
@@ -103,7 +108,11 @@ export function RankingsPage() {
                           {entry.rank}
                         </td>
                         <td className="px-5 py-3.5 font-sans">
-                          <Link to={`/u/${entry.username}`} className="text-ink">
+                          <Link
+                            to={`/u/${entry.username}`}
+                            className="inline-flex items-center gap-2 text-ink"
+                          >
+                            <Avatar id={entry.avatar} size={28} decorative />
                             {entry.username}
                           </Link>
                           {isYou ? <span className="text-you"> (you)</span> : null}

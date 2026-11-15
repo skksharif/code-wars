@@ -16,6 +16,7 @@ Base path `/api`. Every route except `/api/health` requires `Authorization: Bear
 | GET | `/battles/:id` | — | `serverTime`, `battle`, `players` (you first, with progress and rating fields), `totalTests`, and `problem` with samples (null until `starts_at`). Own submissions are read directly from Supabase | Participants only |
 | POST | `/battles/:id/run` | `{ language, code }` | `{ verdict, passed, total, compileOutput?, cases: [{ input, expected, actual, status }] }` | Sample tests only; 5 s cooldown |
 | POST | `/battles/:id/submit` | `{ language, code }` | `{ submissionId, verdict, passed, total, compileOutput?, battleFinished }` | Hidden tests; 10 s cooldown; no test content returned |
+| POST | `/profile/avatar` | `{ avatar }` (cipher, kernel, vector, nova, pixel or echo) | `{ avatar }` | Changes only the signed-in player's avatar |
 | POST | `/battles/:id/forfeit` | — | `{ ok: true }` | |
 | POST | `/battles/:id/finalize` | — | `{ finished: boolean }` | Idempotent; no effect before `ends_at` |
 

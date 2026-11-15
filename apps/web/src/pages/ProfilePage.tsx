@@ -1,7 +1,16 @@
-import { LANGUAGE_LABELS, type Language } from "@code-wars/shared";
+import {
+  AVATAR_INFO,
+  AVATARS,
+  LANGUAGE_LABELS,
+  type AvatarId,
+  type Language,
+} from "@code-wars/shared";
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { Avatar } from "../components/Avatar";
+import { Button } from "../components/ui";
+import { ApiError } from "../lib/api";
 import type { PublicProfile } from "../lib/live";
 import { nextTier, tierFor } from "../lib/tiers";
 import { useServices } from "../services";
@@ -16,7 +25,6 @@ const CUT =
   "polygon(24px 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%, 0 24px)";
 const CUT_INNER =
   "polygon(23px 0, 100% 0, 100% calc(100% - 23px), calc(100% - 23px) 100%, 0 100%, 0 23px)";
-const HEXAGON = "polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)";
 
 function monthYear(iso: string): string {
   const date = new Date(iso);
@@ -41,10 +49,7 @@ function PlayerCard({ profile }: { profile: PublicProfile }) {
   return (
     // Three layers so the cut corners keep a coloured edge and a glow:
     // the outer glow, a frame in the tier colour, then the card itself.
-    <div
-      className="w-full max-w-[420px] flex-none"
-      style={{ filter: `drop-shadow(0 0 22px ${tier.glow})` }}
-    >
+    <div className="w-full" style={{ filter: `drop-shadow(0 0 22px ${tier.glow})` }}>
       <div style={{ background: tier.color, clipPath: CUT, padding: 2 }}>
         <article
           aria-label={`Player card for ${profile.username}`}
@@ -56,13 +61,7 @@ function PlayerCard({ profile }: { profile: PublicProfile }) {
             <span>SINCE {monthYear(profile.memberSince).toUpperCase()}</span>
           </div>
 
-          <div
-            aria-hidden="true"
-            className="flex h-[210px] w-[190px] items-center justify-center bg-ground font-display text-[110px] font-bold"
-            style={{ ...accent, clipPath: HEXAGON, textShadow: `0 0 30px ${tier.glow}` }}
-          >
-            {profile.username[0]?.toUpperCase()}
-          </div>
+          <Avatar id={profile.avatar} size={190} frame={tier.color} shape="hexagon" />
 
           <h1 className="m-0 font-display text-5xl leading-none font-bold break-all">
             {profile.username}
@@ -161,15 +160,112 @@ function RatingChart({ history, color }: { history: number[]; color: string }) {
   );
 }
 
+/** Lets players choose one of the six avatars, on their own profile only. */
+function AvatarPicker({ current, onSaved }: { current: string; onSaved: () => Promise<void> }) {
+  const { api } = useServices();
+  const [open, setOpen] = useState(false);
+  const [choice, setChoice] = useState(current);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!open) {
+    return (
+      <Button
+        variant="outline"
+        onClick={() => {
+          setChoice(current);
+          setError(null);
+          setOpen(true);
+        }}
+      >
+        Change avatar
+      </Button>
+    );
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.setAvatar(choice);
+      await onSaved();
+      setOpen(false);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Could not save the avatar.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const option = (id: AvatarId) => {
+    const selected = choice === id;
+    return (
+      <button
+        key={id}
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        aria-label={AVATAR_INFO[id].name}
+        onClick={() => setChoice(id)}
+        className={`flex cursor-pointer flex-col items-center gap-1 border-0 bg-transparent p-1 font-display font-bold ${
+          selected ? "text-you" : "text-soft hover:text-ink"
+        }`}
+      >
+        <Avatar
+          id={id}
+          size={84}
+          shape="hexagon"
+          frame={selected ? "#22E6FF" : "#3A4160"}
+          decorative
+        />
+        {AVATAR_INFO[id].name.toUpperCase()}
+      </button>
+    );
+  };
+
+  return (
+    <section
+      aria-label="Choose your avatar"
+      className="flex flex-col gap-3 border border-line bg-panel p-4"
+    >
+      <h2 className="m-0 font-display text-lg font-bold tracking-wider">CHOOSE YOUR AVATAR</h2>
+      <div role="radiogroup" aria-label="Avatars" className="flex flex-col gap-2">
+        {(["male", "female"] as const).map((group) => (
+          <div key={group}>
+            <div className="text-xs tracking-[0.16em] text-muted uppercase">{group}</div>
+            <div className="grid grid-cols-3">
+              {AVATARS.filter((id) => AVATAR_INFO[id].group === group).map(option)}
+            </div>
+          </div>
+        ))}
+      </div>
+      {error ? (
+        <p role="alert" className="m-0 text-rival">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex gap-3">
+        <Button disabled={saving || choice === current} onClick={() => void save()}>
+          {saving ? "Saving…" : "Save avatar"}
+        </Button>
+        <Button variant="ghost" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 export function ProfilePage() {
   const { username = "" } = useParams();
   const { data } = useServices();
-  const { profile: me } = useAuth();
+  const { profile: me, refreshProfile } = useAuth();
+  const [reload, setReload] = useState(0);
   const [profile, setProfile] = useState<PublicProfile | null | "loading" | "error">("loading");
 
   useEffect(() => {
     let active = true;
-    setProfile("loading");
+    if (reload === 0) setProfile("loading");
     data.getPublicProfile(username).then(
       (found) => active && setProfile(found),
       () => active && setProfile("error"),
@@ -177,7 +273,7 @@ export function ProfilePage() {
     return () => {
       active = false;
     };
-  }, [data, username]);
+  }, [data, username, reload]);
 
   if (profile === "loading") {
     return (
@@ -217,7 +313,18 @@ export function ProfilePage() {
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-wrap items-start gap-10 px-[5%] py-10">
-      <PlayerCard profile={profile} />
+      <div className="flex w-full max-w-[420px] flex-none flex-col gap-4">
+        <PlayerCard profile={profile} />
+        {isMe ? (
+          <AvatarPicker
+            current={profile.avatar}
+            onSaved={async () => {
+              await refreshProfile();
+              setReload((n) => n + 1);
+            }}
+          />
+        ) : null}
+      </div>
 
       <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-5">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -292,6 +399,7 @@ export function ProfilePage() {
                   >
                     <span>
                       <b className={`font-display uppercase ${result.color}`}>{result.label}</b> vs{" "}
+                      <Avatar id={battle.opponentAvatar} size={26} decorative />{" "}
                       <Link to={`/u/${battle.opponent}`} className="text-you">
                         {battle.opponent}
                       </Link>
