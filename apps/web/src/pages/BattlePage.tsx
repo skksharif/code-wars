@@ -29,6 +29,9 @@ export function BattlePage() {
   const battle = useBattle(id, user!.id);
   const [confirmingForfeit, setConfirmingForfeit] = useState(false);
   const [forfeitError, setForfeitError] = useState<string | null>(null);
+  // Below the large breakpoint the problem and the editor do not fit side by
+  // side, so they become two tabs. Both stay mounted so nothing is lost.
+  const [pane, setPane] = useState<"problem" | "code">("problem");
 
   const finished = battle.phase === "finished";
   useEffect(() => {
@@ -88,7 +91,25 @@ export function BattlePage() {
         rivalOnline={battle.onlineUserIds ? battle.onlineUserIds.includes(rival.userId) : null}
       />
 
-      <div className="flex min-h-12 flex-wrap items-center justify-end gap-3 border-b border-line bg-panel-deep px-6 py-1.5">
+      <div className="flex min-h-12 flex-wrap items-center justify-end gap-2 border-b border-line bg-panel-deep px-3 py-1.5 md:gap-3 md:px-6">
+        {battle.phase !== "ready" && state.problem && !confirmingForfeit ? (
+          <div role="tablist" aria-label="Show" className="mr-auto flex lg:hidden">
+            {(["problem", "code"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={pane === key}
+                onClick={() => setPane(key)}
+                className={`h-11 cursor-pointer border-0 border-b-2 bg-transparent px-4 font-display font-semibold tracking-widest uppercase ${
+                  pane === key ? "border-you text-you" : "border-transparent text-muted"
+                }`}
+              >
+                {key === "problem" ? "Problem" : "Code"}
+              </button>
+            ))}
+          </div>
+        ) : null}
         {forfeitError ? (
           <span role="alert" className="mr-auto text-sm text-rival">
             {forfeitError}
@@ -116,25 +137,41 @@ export function BattlePage() {
       </div>
 
       {battle.phase === "ready" || !state.problem ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center md:p-10">
           <p className="m-0 font-mono text-sm tracking-[0.2em] text-rival uppercase">
             Opponent found
           </p>
-          <h1 className="m-0 font-display text-5xl font-bold uppercase italic">
+          <h1 className="m-0 font-display text-3xl font-bold break-words uppercase italic md:text-5xl">
             {you.username} <span className="text-muted">vs</span>{" "}
             <span className="text-rival">{rival.username}</span>
           </h1>
-          <p className="text-glow-you m-0 font-display text-8xl font-bold text-you">
+          <p className="text-glow-you m-0 font-display text-7xl font-bold text-you md:text-8xl">
             {formatClock(battle.remainingMs)}
           </p>
           <p className="m-0 text-soft">Get ready. The problem appears when the countdown ends.</p>
         </div>
       ) : (
         <div className="flex flex-1 flex-wrap items-stretch">
-          <div className="min-w-0 flex-1 basis-[420px] border-r border-line">
+          <div
+            className={`${pane === "problem" ? "block" : "hidden"} min-w-0 flex-1 basis-full border-line lg:block lg:basis-[420px] lg:border-r`}
+          >
             <ProblemPanel problem={state.problem} />
+            <div className="px-4 pb-6 lg:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setPane("code");
+                  window.scrollTo({ top: 0 });
+                }}
+                className="cut glow-you h-12 w-full cursor-pointer border-0 bg-you font-display font-bold tracking-widest text-ground uppercase"
+              >
+                Start coding
+              </button>
+            </div>
           </div>
-          <div className="flex min-w-0 flex-[999] basis-[520px] flex-col">
+          <div
+            className={`${pane === "code" ? "flex" : "hidden"} min-w-0 flex-[999] basis-full flex-col lg:flex lg:basis-[520px]`}
+          >
             {battle.phase === "expired" ? (
               <p role="status" className="m-0 border-b border-line p-3 text-center text-soft">
                 Time is up. Working out the result…

@@ -5,9 +5,11 @@ type Problem = NonNullable<BattleState["problem"]>;
 
 export function ProblemPanel({ problem }: { problem: Problem }) {
   return (
-    <section aria-label="Problem" className="flex flex-col gap-4 p-6">
+    <section aria-label="Problem" className="flex flex-col gap-4 p-4 md:p-6">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="m-0 font-display text-3xl font-bold uppercase">{problem.title}</h1>
+        <h1 className="m-0 font-display text-2xl font-bold uppercase md:text-3xl">
+          {problem.title}
+        </h1>
         <span className="border border-you px-2 py-0.5 font-mono text-xs text-you uppercase">
           {problem.difficulty}
         </span>

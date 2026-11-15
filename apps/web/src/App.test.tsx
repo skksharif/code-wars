@@ -31,6 +31,27 @@ describe("routing and access", () => {
     expect(screen.getByRole("link", { name: "Code Wars home" })).toHaveAttribute("href", "/");
   });
 
+  it("gives signed-in players a bottom tab bar for phones", async () => {
+    renderApp(createFakeAuth(TEST_USER), "/arena");
+    const tabs = await screen.findByRole("navigation", { name: "Sections" });
+    expect(within(tabs).getByRole("link", { name: "Arena" })).toHaveAttribute("href", "/arena");
+    expect(within(tabs).getByRole("link", { name: "Rankings" })).toHaveAttribute(
+      "href",
+      "/rankings",
+    );
+    expect(within(tabs).getByRole("link", { name: "Profile" })).toHaveAttribute(
+      "href",
+      "/u/coder_42",
+    );
+    expect(tabs).toHaveClass("md:hidden");
+  });
+
+  it("has no bottom tab bar for visitors", async () => {
+    renderApp(createFakeAuth());
+    await screen.findByRole("form", { name: "Create account" });
+    expect(screen.queryByRole("navigation", { name: "Sections" })).not.toBeInTheDocument();
+  });
+
   it("sends signed-out visitors from the arena to log in, then back", async () => {
     const auth = createFakeAuth();
     renderApp(auth, "/arena");

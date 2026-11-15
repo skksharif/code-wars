@@ -6,6 +6,8 @@
 if (typeof document !== "undefined") {
   const { configure } = await import("@testing-library/react");
   configure({ asyncUtilTimeout: 5000 });
+  // jsdom has no layout, so scrolling does nothing (and would log a warning).
+  window.scrollTo = () => undefined;
 }
 
 export {};

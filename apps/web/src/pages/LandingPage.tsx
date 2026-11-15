@@ -11,7 +11,7 @@ export function LandingPage() {
   if (status === "signedIn") return <Navigate to="/arena" replace />;
 
   return (
-    <main className="flex flex-col items-center gap-10 px-[5%] py-14">
+    <main className="flex flex-col items-center gap-8 px-4 py-8 md:gap-10 md:px-[5%] md:py-14">
       <section className="flex flex-col items-center gap-5 text-center">
         <img
           src="/logo.png"
@@ -23,7 +23,7 @@ export function LandingPage() {
         <p className="m-0 font-mono text-sm tracking-[0.2em] text-rival uppercase">
           Ranked 1v1 · 15 minutes · winner takes rating
         </p>
-        <h1 className="m-0 font-display text-6xl leading-none font-bold tracking-wide uppercase italic md:text-8xl">
+        <h1 className="m-0 font-display text-5xl leading-none font-bold tracking-wide uppercase italic sm:text-6xl md:text-8xl">
           Code. <span className="text-glow-you text-you">Clash.</span>{" "}
           <span className="text-glow-rival text-rival">Climb.</span>
         </h1>
@@ -54,7 +54,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <Panel className="w-full max-w-5xl p-7">
+      <Panel className="w-full max-w-5xl p-5 md:p-7">
         <h2 className="mt-0 mb-5 font-display text-2xl font-bold tracking-wider uppercase">
           Enter the arena
         </h2>

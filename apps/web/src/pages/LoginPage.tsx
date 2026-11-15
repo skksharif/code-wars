@@ -14,8 +14,8 @@ export function LoginPage() {
   if (status === "signedIn") return <Navigate to={target} replace />;
 
   return (
-    <main className="flex flex-1 items-center justify-center px-[5%] py-14">
-      <Panel className="w-full max-w-md p-8">
+    <main className="flex flex-1 items-center justify-center px-4 py-8 md:px-[5%] md:py-14">
+      <Panel className="w-full max-w-md p-5 md:p-8">
         <h1 className="mt-0 mb-6 font-display text-3xl font-bold tracking-wider uppercase italic">
           Welcome back
         </h1>

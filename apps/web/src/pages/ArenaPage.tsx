@@ -95,15 +95,15 @@ export function ArenaPage() {
   const range = searching ? matchWindow(search.waitedMs) : LIMITS.matchWindowStart;
 
   return (
-    <main className="flex flex-1 flex-col justify-center gap-8 px-[5%] py-12">
-      <section className="flex flex-wrap items-stretch justify-center gap-8">
-        <div className="glow-you flex max-w-sm min-w-0 flex-1 basis-72 flex-col gap-2 border border-you bg-panel p-7">
+    <main className="flex flex-1 flex-col justify-center gap-6 px-4 py-6 md:gap-8 md:px-[5%] md:py-12">
+      <section className="flex flex-wrap items-stretch justify-center gap-5 md:gap-8">
+        <div className="glow-you flex max-w-sm min-w-0 flex-1 basis-72 flex-col gap-2 border border-you bg-panel p-5 md:p-7">
           <p className="m-0 font-mono text-xs tracking-widest text-you uppercase">You</p>
-          <h1 className="m-0 flex items-center gap-3 font-display text-4xl font-bold">
+          <h1 className="m-0 flex min-w-0 items-center gap-3 font-display text-3xl font-bold break-all md:text-4xl">
             {profile ? <Avatar id={profile.avatar} size={56} frame="#22E6FF" decorative /> : null}
             {profile?.username ?? "Player"}
           </h1>
-          <p className="text-glow-you m-0 font-display text-7xl leading-none font-bold text-you">
+          <p className="text-glow-you m-0 font-display text-6xl leading-none font-bold text-you md:text-7xl">
             {rating}
           </p>
           {profile ? (
@@ -113,8 +113,11 @@ export function ArenaPage() {
           ) : null}
         </div>
 
-        <div className="flex min-w-0 basis-72 flex-col items-center justify-center gap-5 text-center">
-          <p className="m-0 font-display text-7xl leading-none font-bold italic" aria-hidden="true">
+        <div className="flex min-w-0 basis-72 flex-col items-center justify-center gap-4 text-center md:gap-5">
+          <p
+            className="m-0 font-display text-5xl leading-none font-bold italic md:text-7xl"
+            aria-hidden="true"
+          >
             VS
           </p>
           {searching ? (
@@ -134,7 +137,7 @@ export function ArenaPage() {
         </div>
 
         <div
-          className={`flex max-w-sm min-w-0 flex-1 basis-72 flex-col gap-2 border bg-panel p-7 text-right ${
+          className={`flex max-w-sm min-w-0 flex-1 basis-72 flex-col gap-2 border bg-panel p-5 text-right md:p-7 ${
             searching ? "border-rival glow-rival" : "border-dashed border-line-strong"
           }`}
         >
@@ -144,7 +147,7 @@ export function ArenaPage() {
           <p className="m-0 font-display text-4xl font-bold text-muted">? ? ?</p>
           {searching ? (
             <div role="status" className="flex flex-col gap-2">
-              <p className="text-glow-rival m-0 font-display text-7xl leading-none font-bold text-rival">
+              <p className="text-glow-rival m-0 font-display text-6xl leading-none font-bold text-rival md:text-7xl">
                 {formatClock(elapsedMs)}
               </p>
               <p className="m-0 font-mono text-muted">

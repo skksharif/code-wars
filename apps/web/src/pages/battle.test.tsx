@@ -37,7 +37,8 @@ describe("lobby", () => {
   it("shows the player's rating and record", async () => {
     open("/arena");
     expect(await screen.findByText("1 W · 0 L · 0 D")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Find Battle" })).toBeEnabled();
+    // Enabled once the check for a battle in progress has come back.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Find Battle" })).toBeEnabled());
   });
 
   it("resumes a battle that is already in progress", async () => {
@@ -415,5 +416,69 @@ describe("result screen", () => {
     renderWithApp(auth, services, `/battle/${BATTLE_ID}`);
     await screen.findByRole("heading", { name: "Victory" });
     await waitFor(() => expect(auth.getProfile).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("battle room on phones", () => {
+  const openBattle = () => open(`/battle/${BATTLE_ID}`);
+
+  it("switches between the problem and the code with tabs", async () => {
+    openBattle();
+    const problem = await screen.findByRole("region", { name: "Problem" });
+    const editor = await screen.findByRole("region", { name: "Editor" });
+    const problemTab = screen.getByRole("tab", { name: "Problem" });
+    const codeTab = screen.getByRole("tab", { name: "Code" });
+    // Small screens show one pane at a time; wide screens (lg) show both.
+    expect(problemTab).toHaveAttribute("aria-selected", "true");
+    expect(problem.parentElement).not.toHaveClass("hidden");
+    expect(editor.parentElement).toHaveClass("hidden", "lg:flex");
+
+    await userEvent.click(codeTab);
+    expect(codeTab).toHaveAttribute("aria-selected", "true");
+    expect(problem.parentElement).toHaveClass("hidden", "lg:block");
+    expect(editor.parentElement).not.toHaveClass("hidden");
+
+    await userEvent.click(problemTab);
+    await userEvent.click(screen.getByRole("button", { name: "Start coding" }));
+    expect(codeTab).toHaveAttribute("aria-selected", "true");
+    // The bottom tab bar steps aside so the battle gets the whole screen.
+    expect(screen.queryByRole("navigation", { name: "Sections" })).not.toBeInTheDocument();
+  });
+
+  it("keeps code typed in the code tab when switching to the problem and back", async () => {
+    openBattle();
+    await userEvent.click(await screen.findByRole("tab", { name: "Code" }));
+    const editor = await screen.findByLabelText("Code editor");
+    await userEvent.clear(editor);
+    await userEvent.type(editor, "print(1)");
+    await userEvent.click(screen.getByRole("tab", { name: "Problem" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Code" }));
+    expect(screen.getByLabelText("Code editor")).toHaveValue("print(1)");
+  });
+
+  describe("on a touch screen", () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        "matchMedia",
+        (query: string) =>
+          ({ matches: query === "(pointer: coarse)", media: query }) as MediaQueryList,
+      );
+    });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("uses the plain code box, with autocorrect off and indentation kept", async () => {
+      openBattle();
+      const editor = (await screen.findByLabelText("Code editor")) as HTMLTextAreaElement;
+      // The plain box, not the desktop editor.
+      expect(editor).toHaveAttribute("autocapitalize", "off");
+      expect(editor).toHaveAttribute("autocorrect", "off");
+      expect(editor).toHaveAttribute("spellcheck", "false");
+
+      await userEvent.clear(editor);
+      await userEvent.type(editor, "for x in y:{Enter}print(x)");
+      expect(editor).toHaveValue("for x in y:\n    print(x)");
+    });
   });
 });

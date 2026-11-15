@@ -413,7 +413,7 @@ export function ProfilePage() {
   const main = [...languages].sort((x, y) => y[1] - x[1])[0];
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-wrap items-start gap-10 px-[5%] py-10">
+    <main className="mx-auto flex w-full max-w-7xl flex-wrap items-start justify-center gap-6 px-4 py-6 md:gap-10 md:px-[5%] md:py-10">
       <div className="flex w-full max-w-[420px] flex-none flex-col gap-4">
         <PlayerCard profile={profile} />
         {isMe ? (

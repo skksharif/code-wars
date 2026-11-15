@@ -172,9 +172,9 @@ describe("profile page", () => {
       ];
       renderMine();
       const history = await screen.findByRole("region", { name: "Battle history" });
-      expect(history).toHaveTextContent("BATTLE HISTORY · 2");
       const rows = await within(history).findAllByRole("listitem");
       expect(rows).toHaveLength(2);
+      expect(history).toHaveTextContent("BATTLE HISTORY · 2");
       expect(rows[0]).toHaveAccessibleName("Loss vs stack_sage");
       expect(rows[0]).toHaveTextContent("Grid Escape · C++ (GCC 14)");
       expect(rows[0]).toHaveTextContent("−15");

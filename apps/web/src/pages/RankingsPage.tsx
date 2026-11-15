@@ -19,7 +19,7 @@ function PodiumCard({ entry, isYou }: { entry: LeaderboardEntry; isYou: boolean 
         : "border-line-strong py-4 md:order-3";
   return (
     <li
-      className={`flex flex-col gap-1 border bg-panel px-6 ${style} ${isYou ? "border-you glow-you" : ""}`}
+      className={`flex min-w-0 flex-col gap-1 border bg-panel px-5 md:px-6 ${style} ${isYou ? "border-you glow-you" : ""}`}
     >
       <span
         className={`font-display leading-none font-bold ${entry.rank === 1 ? "text-6xl" : "text-4xl"} ${isYou ? "text-you" : ""}`}
@@ -29,10 +29,12 @@ function PodiumCard({ entry, isYou }: { entry: LeaderboardEntry; isYou: boolean 
       </span>
       <Link
         to={`/u/${entry.username}`}
-        className="flex items-center gap-3 text-xl font-semibold text-ink no-underline"
+        className="flex min-w-0 items-center gap-3 text-xl font-semibold text-ink no-underline"
       >
         <Avatar id={entry.avatar} size={44} decorative />
-        {entry.username}
+        <span className="min-w-0 truncate" title={entry.username}>
+          {entry.username}
+        </span>
       </Link>
       <span className="font-mono text-muted">
         {entry.rating} · {record(entry)}
@@ -58,8 +60,8 @@ export function RankingsPage() {
   }, [data]);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-[5%] py-10">
-      <h1 className="m-0 font-display text-5xl leading-none font-bold tracking-wider uppercase italic">
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-[5%] md:py-10">
+      <h1 className="m-0 font-display text-4xl leading-none font-bold tracking-wider uppercase italic md:text-5xl">
         Global rankings
       </h1>
 
@@ -85,14 +87,18 @@ export function RankingsPage() {
           </ol>
 
           {entries.length > 3 ? (
-            <div className="overflow-x-auto border border-line bg-panel">
-              <table className="w-full min-w-[440px] border-collapse text-left">
+            <div className="border border-line bg-panel">
+              <table className="w-full table-fixed border-collapse text-left">
                 <thead>
                   <tr className="text-xs tracking-widest text-muted uppercase">
-                    <th className="px-5 py-3.5 font-medium">Rank</th>
-                    <th className="px-5 py-3.5 font-medium">Player</th>
-                    <th className="px-5 py-3.5 text-right font-medium">Rating</th>
-                    <th className="px-5 py-3.5 text-right font-medium">W / L / D</th>
+                    <th className="w-14 px-3 py-3.5 font-medium md:w-20 md:px-5">Rank</th>
+                    <th className="px-3 py-3.5 font-medium md:px-5">Player</th>
+                    <th className="w-20 px-3 py-3.5 text-right font-medium md:w-28 md:px-5">
+                      Rating
+                    </th>
+                    <th className="hidden w-32 px-5 py-3.5 text-right font-medium sm:table-cell">
+                      W / L / D
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="font-mono">
@@ -104,21 +110,25 @@ export function RankingsPage() {
                         aria-current={isYou ? "true" : undefined}
                         className={`border-t border-line ${isYou ? "bg-you/10" : ""}`}
                       >
-                        <td className={`px-5 py-3.5 ${isYou ? "text-you" : "text-muted"}`}>
+                        <td className={`px-3 py-3.5 md:px-5 ${isYou ? "text-you" : "text-muted"}`}>
                           {entry.rank}
                         </td>
-                        <td className="px-5 py-3.5 font-sans">
-                          <Link
-                            to={`/u/${entry.username}`}
-                            className="inline-flex items-center gap-2 text-ink"
-                          >
-                            <Avatar id={entry.avatar} size={28} decorative />
-                            {entry.username}
-                          </Link>
-                          {isYou ? <span className="text-you"> (you)</span> : null}
+                        <td className="px-3 py-3.5 font-sans md:px-5">
+                          <span className="flex min-w-0 items-center gap-1">
+                            <Link
+                              to={`/u/${entry.username}`}
+                              className="inline-flex min-w-0 items-center gap-2 text-ink"
+                            >
+                              <Avatar id={entry.avatar} size={28} decorative />
+                              <span className="truncate" title={entry.username}>
+                                {entry.username}
+                              </span>
+                            </Link>
+                            {isYou ? <span className="flex-none text-you"> (you)</span> : null}
+                          </span>
                         </td>
-                        <td className="px-5 py-3.5 text-right">{entry.rating}</td>
-                        <td className="px-5 py-3.5 text-right text-muted">
+                        <td className="px-3 py-3.5 text-right md:px-5">{entry.rating}</td>
+                        <td className="hidden px-5 py-3.5 text-right text-muted sm:table-cell">
                           {entry.wins} / {entry.losses} / {entry.draws}
                         </td>
                       </tr>

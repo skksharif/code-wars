@@ -4,9 +4,15 @@ import { Button } from "../components/ui";
 import { ApiError, type RunResult, type SubmitResult } from "../lib/api";
 import { useServices } from "../services";
 import { loadCode, loadLanguage, saveCode, saveLanguage } from "./codeStore";
+import { PlainCodeEditor } from "./PlainCodeEditor";
 import { VERDICT_LABELS } from "./labels";
 
 const CodeEditor = lazy(() => import("./CodeEditor"));
+
+/** Phones and tablets: a finger, not a mouse, is the main pointer. */
+function isTouchDevice(): boolean {
+  return typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches;
+}
 
 type Kind = "run" | "submit";
 
@@ -39,6 +45,7 @@ export function EditorPanel({
   // the real cooldown; this only mirrors it so the buttons can count down.
   const [readyAt, setReadyAt] = useState<Record<Kind, number>>({ run: 0, submit: 0 });
   const [now, setNow] = useState(() => Date.now());
+  const [touch] = useState(isTouchDevice);
 
   const coolingDown = readyAt.run > now || readyAt.submit > now;
   useEffect(() => {
@@ -96,7 +103,7 @@ export function EditorPanel({
 
   return (
     <section aria-label="Editor" className="flex min-w-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line px-3 py-2 md:px-4">
         <div className="flex items-center gap-2">
           <label htmlFor="language" className="text-xs tracking-wider text-muted uppercase">
             Language
@@ -105,7 +112,7 @@ export function EditorPanel({
             id="language"
             value={language}
             onChange={(e) => changeLanguage(e.target.value as Language)}
-            className="h-11 border border-line-strong bg-panel px-3 text-ink"
+            className="h-11 border border-line-strong bg-panel px-3 text-base text-ink"
           >
             {LANGUAGES.map((l) => (
               <option key={l} value={l}>
@@ -114,25 +121,31 @@ export function EditorPanel({
             ))}
           </select>
         </div>
-        <span className="text-sm text-muted">Your code is saved in this browser.</span>
+        <span className="text-xs text-muted md:text-sm">Your code is saved in this browser.</span>
       </div>
 
       <div className="min-h-[380px] flex-1 bg-[#07080d]">
-        <Suspense fallback={<p className="p-4 text-muted">Loading editor…</p>}>
-          <CodeEditor language={language} value={code} onChange={changeCode} />
-        </Suspense>
+        {touch ? (
+          <PlainCodeEditor language={language} value={code} onChange={changeCode} />
+        ) : (
+          <Suspense fallback={<p className="p-4 text-muted">Loading editor…</p>}>
+            <CodeEditor language={language} value={code} onChange={changeCode} />
+          </Suspense>
+        )}
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-line bg-panel px-4 py-3">
-        <div className="flex flex-wrap items-center justify-end gap-3">
+      <div className="flex flex-col gap-3 border-t border-line bg-panel px-3 py-3 md:px-4">
+        <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:items-center md:justify-end">
           <Button
             variant="outline"
+            className="px-2 text-sm tracking-wider whitespace-nowrap md:px-7 md:text-base md:tracking-widest"
             disabled={blocked || waitSeconds("run") > 0}
             onClick={() => void send("run")}
           >
             {label("run", "Run samples", "Running…")}
           </Button>
           <Button
+            className="px-2 text-sm tracking-wider whitespace-nowrap md:px-7 md:text-base md:tracking-widest"
             disabled={blocked || waitSeconds("submit") > 0}
             onClick={() => void send("submit")}
           >

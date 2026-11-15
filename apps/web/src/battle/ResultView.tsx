@@ -42,7 +42,7 @@ function PlayerCard({
   const delta = player.ratingAfter === null ? null : player.ratingAfter - player.ratingBefore;
   return (
     <div
-      className={`flex min-w-0 flex-1 basis-80 flex-col gap-2 border-b-[3px] bg-panel px-[5%] py-8 ${edge} ${side === "rival" ? "items-end text-right" : ""}`}
+      className={`flex min-w-0 flex-1 basis-80 flex-col gap-2 border-b-[3px] bg-panel px-4 py-6 md:px-[5%] md:py-8 ${edge} ${side === "rival" ? "items-end text-right" : ""}`}
     >
       <p className={`m-0 font-mono text-xs tracking-widest uppercase ${accent}`}>
         {outcome}
@@ -50,7 +50,7 @@ function PlayerCard({
       </p>
       <Link
         to={`/u/${player.username}`}
-        className={`flex items-center gap-3 font-display text-3xl font-bold text-ink no-underline ${side === "rival" ? "flex-row-reverse" : ""}`}
+        className={`flex max-w-full min-w-0 items-center gap-3 font-display text-2xl font-bold text-ink no-underline md:text-3xl ${side === "rival" ? "flex-row-reverse" : ""}`}
       >
         <Avatar
           id={player.avatar}
@@ -58,7 +58,7 @@ function PlayerCard({
           frame={side === "you" ? "#22E6FF" : "#FF2E9A"}
           decorative
         />
-        {player.username}
+        <span className="min-w-0 break-all">{player.username}</span>
       </Link>
       {player.ratingAfter !== null && delta !== null ? (
         <p
@@ -69,8 +69,8 @@ function PlayerCard({
           <span aria-hidden="true" className="text-muted">
             →
           </span>
-          <span className="text-6xl leading-none">{player.ratingAfter}</span>
-          <span className={`text-3xl ${accent}`}>
+          <span className="text-5xl leading-none md:text-6xl">{player.ratingAfter}</span>
+          <span className={`text-2xl md:text-3xl ${accent}`}>
             {delta >= 0 ? "+" : "−"}
             {Math.abs(delta)}
           </span>
@@ -122,10 +122,10 @@ export function ResultView({ state }: { state: BattleState }) {
 
   return (
     <main className="flex flex-1 flex-col">
-      <section className="border-b border-line px-[5%] pt-10 pb-7 text-center">
+      <section className="border-b border-line px-4 pt-7 pb-6 text-center md:px-[5%] md:pt-10 md:pb-7">
         <p className="m-0 font-mono text-xs tracking-[0.2em] text-muted uppercase">Battle over</p>
         <h1
-          className={`mt-2 mb-0 font-display text-7xl leading-none font-bold tracking-wider uppercase italic md:text-9xl ${headlineStyle}`}
+          className={`mt-2 mb-0 font-display text-6xl leading-none font-bold tracking-wider uppercase italic sm:text-7xl md:text-9xl ${headlineStyle}`}
         >
           {headline}
         </h1>
@@ -137,7 +137,7 @@ export function ResultView({ state }: { state: BattleState }) {
         <PlayerCard player={rival} total={state.totalTests} side="rival" />
       </section>
 
-      <div className="mx-auto flex w-[90%] max-w-5xl flex-col gap-6 py-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 md:w-[90%] md:px-0 md:py-8">
         <div className="flex flex-wrap justify-center gap-4">
           <Link
             to="/arena"
@@ -156,7 +156,7 @@ export function ResultView({ state }: { state: BattleState }) {
                 role="tab"
                 aria-selected={tab === key}
                 onClick={() => setTab(key)}
-                className={`h-12 cursor-pointer border-0 border-b-2 bg-transparent px-6 font-display font-semibold tracking-widest uppercase ${
+                className={`min-h-12 min-w-0 flex-1 cursor-pointer border-0 border-b-2 bg-transparent px-3 py-2 font-display text-sm font-semibold tracking-widest break-all uppercase md:flex-none md:px-6 md:text-base ${
                   tab === key ? "border-you text-you" : "border-transparent text-muted"
                 }`}
               >
@@ -164,7 +164,7 @@ export function ResultView({ state }: { state: BattleState }) {
               </button>
             ))}
           </div>
-          <div role="tabpanel" className="p-5">
+          <div role="tabpanel" className="p-4 md:p-5">
             {solutions === "loading" ? (
               <p className="m-0 text-muted">Loading…</p>
             ) : solutions === "error" ? (
