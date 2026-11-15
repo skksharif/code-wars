@@ -30,6 +30,15 @@ export function buildSeedSql(salt: string): string {
   ];
 
   for (const p of PROBLEMS) {
+    const hidden = p.hidden();
+    // Inputs must be clean for every salt, not just the one the tests use.
+    for (const input of [...p.samples.map((s) => s.input), ...hidden]) {
+      if (input.length === 0 || /\n\n|\s$|^\s|\r/.test(input)) {
+        throw new Error(`${p.slug}: a test input is empty or has stray whitespace`);
+      }
+    }
+    if (hidden.length < 5) throw new Error(`${p.slug}: fewer than 5 hidden tests`);
+
     const samples = p.samples.map((s) => ({
       input: s.input,
       output: p.solve(s.input),
@@ -45,7 +54,7 @@ export function buildSeedSql(salt: string): string {
       `delete from public.problem_tests where problem_id = (select id from public.problems where slug = ${quote(p.slug)});`,
     );
 
-    p.hidden().forEach((input, index) => {
+    hidden.forEach((input, index) => {
       out.push(
         `insert into public.problem_tests (problem_id, ordinal, input, expected_output)`,
         `values ((select id from public.problems where slug = ${quote(p.slug)}), ${index + 1}, ${quote(input)}, ${quote(p.solve(input))});`,
