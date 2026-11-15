@@ -93,6 +93,62 @@ describe("lobby", () => {
   });
 });
 
+describe("lobby on phones", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) =>
+        ({ matches: query === "(max-width: 767px)", media: query }) as MediaQueryList,
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows a rating strip with tier progress and one big button", async () => {
+    open("/arena");
+    const strip = await screen.findByRole("region", { name: "Your rating" });
+    expect(within(strip).getByRole("heading", { name: "coder_42" })).toBeInTheDocument();
+    expect(within(strip).getByLabelText("Rating 1216")).toBeInTheDocument();
+    expect(strip).toHaveTextContent("Silver");
+    expect(strip).toHaveTextContent("84 to Gold");
+    // 1216 is 116 of the 200 points from Silver (1100) to Gold (1300).
+    expect(within(strip).getByRole("progressbar", { name: "Progress to Gold" })).toHaveAttribute(
+      "aria-valuenow",
+      "58",
+    );
+    // Only the phone layout is shown: no VS cards.
+    expect(screen.queryByText("? ? ?")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Find Battle" })).toBeEnabled());
+    expect(screen.getByText(/Opponent within ± 100 rating/)).toBeInTheDocument();
+  });
+
+  it("turns the button into a search timer with Cancel", async () => {
+    services.api.joinMatchmaking.mockResolvedValue({ status: "queued", waitedMs: 0 });
+    open("/arena");
+    const find = await screen.findByRole("button", { name: "Find Battle" });
+    await waitFor(() => expect(find).toBeEnabled());
+    await userEvent.click(find);
+
+    expect(
+      await screen.findByRole("status", { name: /Searching for an opponent, 00:0\d/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Searching rating 1116 to 1316")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(services.api.cancelMatchmaking).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Find Battle" })).toBeInTheDocument();
+  });
+
+  it("enters the battle when matched", async () => {
+    services.api.joinMatchmaking.mockResolvedValue({ status: "matched", battleId: BATTLE_ID });
+    open("/arena");
+    const find = await screen.findByRole("button", { name: "Find Battle" });
+    await waitFor(() => expect(find).toBeEnabled());
+    await userEvent.click(find);
+    expect(await screen.findByRole("timer")).toBeInTheDocument();
+  });
+});
+
 describe("battle room", () => {
   const openBattle = () => open(`/battle/${BATTLE_ID}`);
 

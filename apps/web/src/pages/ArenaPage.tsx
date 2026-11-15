@@ -1,5 +1,5 @@
 import { LIMITS, matchWindow } from "@code-wars/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { formatClock } from "../battle/useBattle";
@@ -7,6 +7,8 @@ import { Button } from "../components/ui";
 import { ApiError } from "../lib/api";
 import { useServices } from "../services";
 import { Avatar } from "../components/Avatar";
+import { nextTier, tierFor } from "../lib/tiers";
+import { PHONE_QUERY, useMediaQuery } from "../lib/useMediaQuery";
 
 type Search =
   | { status: "checking" }
@@ -17,6 +19,7 @@ export function ArenaPage() {
   const { profile } = useAuth();
   const { api, timing } = useServices();
   const navigate = useNavigate();
+  const phone = useMediaQuery(PHONE_QUERY);
   const [search, setSearch] = useState<Search>({ status: "checking" });
   const [now, setNow] = useState(() => Date.now());
   const searching = search.status === "searching";
@@ -93,6 +96,38 @@ export function ArenaPage() {
   const rating = profile?.rating ?? LIMITS.initialRating;
   const elapsedMs = searching ? Math.max(0, now - search.startedAt) : 0;
   const range = searching ? matchWindow(search.waitedMs) : LIMITS.matchWindowStart;
+  const start = () => setSearch({ status: "searching", startedAt: Date.now(), waitedMs: 0 });
+
+  const messages = (
+    <>
+      {search.status === "idle" && search.notice ? (
+        <p role="status" className="m-0 text-center text-soft">
+          {search.notice}
+        </p>
+      ) : null}
+      {search.status === "idle" && search.error ? (
+        <p role="alert" className="m-0 text-center text-rival">
+          {search.error}
+        </p>
+      ) : null}
+    </>
+  );
+
+  if (phone) {
+    return (
+      <PhoneArena
+        rating={rating}
+        searching={searching}
+        checking={search.status === "checking"}
+        elapsedMs={elapsedMs}
+        range={range}
+        onStart={start}
+        onCancel={() => void cancel()}
+      >
+        {messages}
+      </PhoneArena>
+    );
+  }
 
   return (
     <main className="flex flex-1 flex-col justify-center gap-6 px-4 py-6 md:gap-8 md:px-[5%] md:py-12">
@@ -128,7 +163,7 @@ export function ArenaPage() {
             <Button
               className="h-[72px] px-12 text-2xl"
               disabled={search.status === "checking"}
-              onClick={() => setSearch({ status: "searching", startedAt: Date.now(), waitedMs: 0 })}
+              onClick={start}
             >
               Find Battle
             </Button>
@@ -160,16 +195,163 @@ export function ArenaPage() {
         </div>
       </section>
 
-      {search.status === "idle" && search.notice ? (
-        <p role="status" className="m-0 text-center text-soft">
-          {search.notice}
+      {messages}
+    </main>
+  );
+}
+
+const HEXAGON = "polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)";
+
+function BracketsIcon() {
+  return (
+    <svg width="56" height="38" viewBox="0 0 46 30" aria-hidden="true">
+      <path d="M17 4 6 15l11 11" fill="none" stroke="currentColor" strokeWidth="5" />
+      <path d="M29 4l11 11-11 11" fill="none" stroke="currentColor" strokeWidth="5" />
+      <path d="M26 2 19 16h6l-5 12 9-15h-6z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * The arena on phones (design option B): a slim strip with your rating and
+ * progress to the next tier, then one big hexagon button. While searching the
+ * hexagon turns pink and shows the time spent looking, with Cancel below.
+ */
+function PhoneArena({
+  rating,
+  searching,
+  checking,
+  elapsedMs,
+  range,
+  onStart,
+  onCancel,
+  children,
+}: {
+  rating: number;
+  searching: boolean;
+  checking: boolean;
+  elapsedMs: number;
+  range: number;
+  onStart: () => void;
+  onCancel: () => void;
+  children: ReactNode;
+}) {
+  const { profile } = useAuth();
+  const tier = tierFor(rating);
+  const next = nextTier(rating);
+  // Bronze has no lower bound; measure it from 200 below Silver.
+  const floor = Number.isFinite(tier.min) ? tier.min : (next?.tier.min ?? rating) - 200;
+  const progress = next ? Math.min(1, Math.max(0, (rating - floor) / (next.tier.min - floor))) : 1;
+
+  return (
+    <main className="flex flex-1 flex-col gap-4 px-4 py-4">
+      <section
+        aria-label="Your rating"
+        className="flex flex-col gap-2.5 border border-line bg-panel px-4 py-3.5"
+      >
+        <div className="flex items-center gap-3">
+          {profile ? <Avatar id={profile.avatar} size={48} frame={tier.color} decorative /> : null}
+          <div className="min-w-0 flex-1">
+            <h1 className="m-0 truncate font-display text-xl leading-tight font-bold">
+              {profile?.username ?? "Player"}
+            </h1>
+            {profile ? (
+              <p className="m-0 font-mono text-xs text-muted">
+                {profile.wins} W · {profile.losses} L · {profile.draws} D
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <span
+              className="text-glow-you font-display text-4xl leading-none font-bold text-you"
+              aria-label={`Rating ${rating}`}
+            >
+              {rating}
+            </span>
+            <span
+              className="px-2 font-display text-[11px] font-bold tracking-[0.16em] text-ground uppercase"
+              style={{ background: tier.color }}
+            >
+              {tier.name}
+            </span>
+          </div>
+        </div>
+        <div
+          role="progressbar"
+          aria-label={next ? `Progress to ${next.tier.name}` : "Top tier reached"}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress * 100)}
+          className="h-1.5 bg-line"
+        >
+          <div className="h-1.5" style={{ width: `${progress * 100}%`, background: tier.color }} />
+        </div>
+        <p className="m-0 flex justify-between font-mono text-xs text-muted">
+          <span>
+            {tier.name}
+            {Number.isFinite(tier.min) ? ` ${tier.min}` : ""}
+          </span>
+          <span>{next ? `${next.pointsNeeded} to ${next.tier.name}` : "Top tier"}</span>
         </p>
-      ) : null}
-      {search.status === "idle" && search.error ? (
-        <p role="alert" className="m-0 text-center text-rival">
-          {search.error}
-        </p>
-      ) : null}
+      </section>
+
+      <section className="flex flex-1 flex-col items-center justify-center gap-4 py-2">
+        {searching ? (
+          <div
+            role="status"
+            className="drop-shadow-[0_0_28px_rgba(255,46,154,0.55)]"
+            aria-label={`Searching for an opponent, ${formatClock(elapsedMs)}`}
+          >
+            <div
+              className="flex h-[254px] w-[230px] flex-col items-center justify-center gap-1 bg-rival text-ground"
+              style={{ clipPath: HEXAGON }}
+            >
+              <span className="font-display text-sm font-bold tracking-[0.2em] uppercase">
+                Searching
+              </span>
+              <span className="font-display text-5xl leading-none font-bold">
+                {formatClock(elapsedMs)}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="drop-shadow-[0_0_28px_rgba(34,230,255,0.55)] focus-within:drop-shadow-[0_0_6px_#ffffff]">
+            <button
+              type="button"
+              aria-label="Find Battle"
+              onClick={onStart}
+              disabled={checking}
+              className="flex h-[254px] w-[230px] cursor-pointer flex-col items-center justify-center gap-1.5 border-0 bg-you text-ground transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ clipPath: HEXAGON }}
+            >
+              <BracketsIcon />
+              <span className="text-center font-display text-3xl leading-[1.05] font-bold tracking-[0.1em] uppercase">
+                Find
+                <br />
+                Battle
+              </span>
+            </button>
+          </div>
+        )}
+
+        {searching ? (
+          <>
+            <p className="m-0 text-center font-mono text-sm text-muted">
+              Searching rating {rating - range} to {rating + range}
+            </p>
+            <Button variant="ghost" className="w-full max-w-[230px]" onClick={onCancel}>
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <p className="m-0 text-center text-sm text-muted">
+            Ranked · one problem · 15 minutes
+            <br />
+            Opponent within ± {range} rating
+          </p>
+        )}
+        {children}
+      </section>
     </main>
   );
 }
