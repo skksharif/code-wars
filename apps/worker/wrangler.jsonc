@@ -12,7 +12,7 @@
   "vars": {
     "SUPABASE_URL": "https://ptrdipriebabfpfdxuim.supabase.co",
     "JUDGE_PROVIDER": "judge0",
-    "JUDGE_DAILY_LIMIT": "50",
+    "JUDGE_DAILY_LIMIT": "200",
     "JUDGE0_API_URL": "https://judge0-ce.p.rapidapi.com",
     "JUDGE0_API_HOST": "judge0-ce.p.rapidapi.com",
     "ALLOWED_ORIGINS": "https://code-wars.unified-loans-commercial.workers.dev",
