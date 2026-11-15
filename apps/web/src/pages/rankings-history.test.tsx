@@ -41,6 +41,7 @@ const battle = (overrides: Partial<HistoryEntry>): HistoryEntry => ({
   finishedAt: "2026-11-14T10:00:00Z",
   problemTitle: "Count the Peaks",
   opponent: "byte_rival",
+  opponentAvatar: "pixel",
   ...overrides,
 });
 
@@ -101,62 +102,46 @@ describe("rankings", () => {
 });
 
 describe("history", () => {
-  it("requires sign-in", async () => {
-    renderWithApp(createFakeAuth(), services, "/history");
-    expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
+  it("has no tab of its own in the menu", async () => {
+    renderWithApp(createFakeAuth(TEST_USER), services, "/arena");
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await within(nav).findByRole("link", { name: /Your profile/ });
+    expect(within(nav).queryByRole("link", { name: "History" })).not.toBeInTheDocument();
   });
 
-  it("lists finished battles, newest first, linking to each result", async () => {
-    services.history = [
-      battle({
-        battleId: "b-2",
-        result: "loss",
-        ratingBefore: 1216,
-        ratingAfter: 1201,
-        language: "cpp",
-        opponent: "stack_sage",
-        problemTitle: "Grid Escape",
-        finishedAt: "2026-11-15T10:00:00Z",
-      }),
-      battle({}),
-    ];
-    renderWithApp(createFakeAuth(TEST_USER), services, "/history");
-
-    const links = await screen.findAllByRole("link", { name: /vs / });
-    expect(links).toHaveLength(2);
-    expect(links[0]).toHaveAttribute("href", "/battle/b-2");
-    expect(links[0]).toHaveTextContent("Loss vs stack_sage−15");
-    expect(links[0]).toHaveTextContent("Grid Escape · C++ (GCC 14)");
-    expect(links[1]).toHaveTextContent("Win vs byte_rival+16");
-    expect(links[1]).toHaveTextContent("Count the Peaks · Python 3.12");
-  });
-
-  it("shows the profile and a rating history chart", async () => {
-    services.history = [
-      battle({ battleId: "b-2", result: "loss", ratingBefore: 1216, ratingAfter: 1201 }),
-      battle({}),
-    ];
+  it("sends old /history links to your profile, where the history now lives", async () => {
+    services.profiles = {
+      me: {
+        username: "coder_42",
+        avatar: "vector",
+        rating: 1216,
+        rank: 4,
+        memberSince: "2026-11-01T00:00:00Z",
+        wins: 1,
+        losses: 0,
+        draws: 0,
+        peakRating: 1216,
+        streak: { result: "win", count: 1 },
+        ratingHistory: [1200, 1216],
+        languages: { python: 1 },
+        winsByDifficulty: { easy: 1, medium: 0, hard: 0 },
+        recentBattles: [],
+      },
+    };
+    services.history = [battle({})];
     renderWithApp(createFakeAuth(TEST_USER), services, "/history");
     expect(
-      await screen.findByRole("img", {
-        name: "Rating history from 1200 to 1201, lowest 1200, highest 1216",
-      }),
+      await screen.findByRole("article", { name: "Player card for coder_42" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("1 wins · 0 losses · 0 draws")).toBeInTheDocument();
+    const history = await screen.findByRole("region", { name: "Battle history" });
+    expect(await within(history).findByRole("link", { name: "view battle" })).toHaveAttribute(
+      "href",
+      "/battle/b-1",
+    );
   });
 
-  it("handles no battles and a failed load", async () => {
-    const first = renderWithApp(createFakeAuth(TEST_USER), services, "/history");
-    expect(await screen.findByText(/No battles yet/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Find your first one" })).toHaveAttribute(
-      "href",
-      "/arena",
-    );
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    first.unmount();
-
-    services.history = new Error("down");
-    renderWithApp(createFakeAuth(TEST_USER), services, "/history");
-    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load your battles");
+  it("still requires sign-in", async () => {
+    renderWithApp(createFakeAuth(), services, "/history");
+    expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
   });
 });

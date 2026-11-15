@@ -12,9 +12,6 @@ const ArenaPage = lazy(() => import("./pages/ArenaPage").then((m) => ({ default:
 const BattlePage = lazy(() =>
   import("./pages/BattlePage").then((m) => ({ default: m.BattlePage })),
 );
-const HistoryPage = lazy(() =>
-  import("./pages/HistoryPage").then((m) => ({ default: m.HistoryPage })),
-);
 const ProfilePage = lazy(() =>
   import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
@@ -39,6 +36,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
   return <>{children}</>;
+}
+
+/** Battle history now lives on the player's own profile; old links still work. */
+function HistoryRedirect() {
+  const { profile } = useAuth();
+  if (!profile) return <PageLoading />;
+  return <Navigate to={`/u/${profile.username}`} replace />;
 }
 
 export function App() {
@@ -70,7 +74,7 @@ export function App() {
             path="/history"
             element={
               <RequireAuth>
-                <HistoryPage />
+                <HistoryRedirect />
               </RequireAuth>
             }
           />

@@ -11,7 +11,7 @@ import { useAuth } from "../auth/AuthContext";
 import { Avatar } from "../components/Avatar";
 import { Button } from "../components/ui";
 import { ApiError } from "../lib/api";
-import type { PublicProfile } from "../lib/live";
+import type { HistoryEntry, PublicProfile } from "../lib/live";
 import { nextTier, tierFor } from "../lib/tiers";
 import { useServices } from "../services";
 
@@ -31,6 +31,13 @@ function monthYear(iso: string): string {
   return Number.isNaN(date.getTime())
     ? ""
     : date.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+}
+
+function fullDate(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function timeAgo(iso: string): string {
@@ -160,6 +167,100 @@ function RatingChart({ history, color }: { history: number[]; color: string }) {
   );
 }
 
+function Delta({ before, after }: { before: number; after: number }) {
+  const delta = after - before;
+  return (
+    <span className={`font-mono ${delta >= 0 ? "text-you" : "text-rival"}`}>
+      {delta >= 0 ? "+" : "−"}
+      {Math.abs(delta)}
+    </span>
+  );
+}
+
+/**
+ * The player's own full battle history: problem, language and date, with a
+ * link to each result. Only shown on your own profile; other people's profiles
+ * show just their last few results.
+ */
+function BattleHistory({ userId }: { userId: string }) {
+  const { data } = useServices();
+  const [history, setHistory] = useState<HistoryEntry[] | "loading" | "error">("loading");
+
+  useEffect(() => {
+    let active = true;
+    data.getHistory(userId).then(
+      (rows) => active && setHistory(rows),
+      () => active && setHistory("error"),
+    );
+    return () => {
+      active = false;
+    };
+  }, [data, userId]);
+
+  return (
+    <section aria-label="Battle history" className="border border-line bg-panel px-5 py-4">
+      <h2 className="m-0 mb-1 text-xs font-normal tracking-[0.14em] text-muted">
+        BATTLE HISTORY{Array.isArray(history) && history.length > 0 ? ` · ${history.length}` : ""}
+      </h2>
+      {history === "loading" ? (
+        <p role="status" className="m-0 text-muted">
+          Loading your battles…
+        </p>
+      ) : history === "error" ? (
+        <p role="alert" className="m-0 text-rival">
+          Could not load your battles. Try again in a moment.
+        </p>
+      ) : history.length === 0 ? (
+        <p className="m-0 text-soft">
+          No battles yet.{" "}
+          <Link to="/arena" className="text-you">
+            Find your first one
+          </Link>
+          .
+        </p>
+      ) : (
+        <ul className="m-0 list-none p-0">
+          {history.map((battle) => {
+            const result = RESULT[battle.result];
+            return (
+              <li
+                key={battle.battleId}
+                aria-label={`${result.label} vs ${battle.opponent}`}
+                className="flex min-h-11 items-center justify-between gap-3 border-t border-line py-2.5"
+              >
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span>
+                    <b className={`font-display uppercase ${result.color}`}>{result.label}</b> vs{" "}
+                    <Avatar id={battle.opponentAvatar} size={26} decorative />{" "}
+                    <Link to={`/u/${battle.opponent}`} className="text-you">
+                      {battle.opponent}
+                    </Link>
+                  </span>
+                  <span className="text-sm text-muted">
+                    {[
+                      battle.problemTitle,
+                      battle.language ? LANGUAGE_LABELS[battle.language] : null,
+                      fullDate(battle.finishedAt),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+                <span className="flex flex-none flex-col items-end gap-0.5">
+                  <Delta before={battle.ratingBefore} after={battle.ratingAfter} />
+                  <Link to={`/battle/${battle.battleId}`} className="text-sm text-muted">
+                    view battle
+                  </Link>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** Lets players choose one of the six avatars, on their own profile only. */
 function AvatarPicker({ current, onSaved }: { current: string; onSaved: () => Promise<void> }) {
   const { api } = useServices();
@@ -259,7 +360,7 @@ function AvatarPicker({ current, onSaved }: { current: string; onSaved: () => Pr
 export function ProfilePage() {
   const { username = "" } = useParams();
   const { data } = useServices();
-  const { profile: me, refreshProfile } = useAuth();
+  const { user, profile: me, refreshProfile } = useAuth();
   const [reload, setReload] = useState(0);
   const [profile, setProfile] = useState<PublicProfile | null | "loading" | "error">("loading");
 
@@ -381,47 +482,42 @@ export function ProfilePage() {
           </section>
         </div>
 
-        <section aria-label="Recent battles" className="border border-line bg-panel px-5 py-4">
-          <h2 className="m-0 mb-1 text-xs font-normal tracking-[0.14em] text-muted">
-            RECENT BATTLES
-          </h2>
-          {profile.recentBattles.length === 0 ? (
-            <p className="m-0 text-muted">No battles yet.</p>
-          ) : (
-            <ul className="m-0 list-none p-0">
-              {profile.recentBattles.map((battle) => {
-                const delta = battle.ratingAfter - battle.ratingBefore;
-                const result = RESULT[battle.result];
-                return (
-                  <li
-                    key={battle.battleId}
-                    className="flex min-h-11 items-center justify-between gap-3 border-t border-line py-2"
-                  >
-                    <span>
-                      <b className={`font-display uppercase ${result.color}`}>{result.label}</b> vs{" "}
-                      <Avatar id={battle.opponentAvatar} size={26} decorative />{" "}
-                      <Link to={`/u/${battle.opponent}`} className="text-you">
-                        {battle.opponent}
-                      </Link>
-                      {isMe ? (
-                        <>
-                          {" · "}
-                          <Link to={`/battle/${battle.battleId}`} className="text-sm text-muted">
-                            view battle
-                          </Link>
-                        </>
-                      ) : null}
-                    </span>
-                    <span className={`font-mono ${delta >= 0 ? "text-you" : "text-rival"}`}>
-                      {delta >= 0 ? "+" : "−"}
-                      {Math.abs(delta)} · {timeAgo(battle.finishedAt)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+        {isMe && user ? (
+          <BattleHistory userId={user.id} />
+        ) : (
+          <section aria-label="Recent battles" className="border border-line bg-panel px-5 py-4">
+            <h2 className="m-0 mb-1 text-xs font-normal tracking-[0.14em] text-muted">
+              RECENT BATTLES
+            </h2>
+            {profile.recentBattles.length === 0 ? (
+              <p className="m-0 text-muted">No battles yet.</p>
+            ) : (
+              <ul className="m-0 list-none p-0">
+                {profile.recentBattles.map((battle) => {
+                  const result = RESULT[battle.result];
+                  return (
+                    <li
+                      key={battle.battleId}
+                      className="flex min-h-11 items-center justify-between gap-3 border-t border-line py-2"
+                    >
+                      <span>
+                        <b className={`font-display uppercase ${result.color}`}>{result.label}</b>{" "}
+                        vs <Avatar id={battle.opponentAvatar} size={26} decorative />{" "}
+                        <Link to={`/u/${battle.opponent}`} className="text-you">
+                          {battle.opponent}
+                        </Link>
+                      </span>
+                      <span className="font-mono">
+                        <Delta before={battle.ratingBefore} after={battle.ratingAfter} />{" "}
+                        <span className="text-muted">· {timeAgo(battle.finishedAt)}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        )}
       </div>
     </main>
   );

@@ -43,9 +43,6 @@ export function Layout({ children }: { children: ReactNode }) {
           </NavLink>
           {status === "signedIn" ? (
             <>
-              <NavLink to="/history" className={navLink}>
-                History
-              </NavLink>
               {profile ? (
                 <NavLink
                   to={`/u/${profile.username}`}

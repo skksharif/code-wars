@@ -43,6 +43,7 @@ export interface HistoryEntry {
   finishedAt: string;
   problemTitle: string;
   opponent: string;
+  opponentAvatar: string;
 }
 
 export interface PublicProfile {
@@ -147,7 +148,7 @@ interface HistoryRow {
 
 interface OpponentRow {
   battle_id: string;
-  profiles: { username: string } | null;
+  profiles: { username: string; avatar: string } | null;
 }
 
 interface PublicProfileRow {
@@ -234,17 +235,17 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
 
       const opponents = await supabase
         .from("battle_players")
-        .select("battle_id, profiles(username)")
+        .select("battle_id, profiles(username, avatar)")
         .in(
           "battle_id",
           rows.map((row) => row.battle_id),
         )
         .neq("user_id", userId);
       if (opponents.error) throw new Error("Could not load your battles.");
-      const names = new Map(
+      const rivals = new Map(
         ((opponents.data ?? []) as unknown as OpponentRow[]).map((row) => [
           row.battle_id,
-          row.profiles?.username ?? "unknown",
+          row.profiles,
         ]),
       );
 
@@ -258,7 +259,8 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
           bestPassed: row.best_passed,
           finishedAt: row.battles?.finished_at ?? "",
           problemTitle: row.battles?.problems?.title ?? "Unknown problem",
-          opponent: names.get(row.battle_id) ?? "unknown",
+          opponent: rivals.get(row.battle_id)?.username ?? "unknown",
+          opponentAvatar: rivals.get(row.battle_id)?.avatar ?? "cipher",
         }))
         .sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
     },

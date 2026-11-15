@@ -4,7 +4,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ApiError } from "../lib/api";
-import type { PublicProfile } from "../lib/live";
+import type { HistoryEntry, PublicProfile } from "../lib/live";
 import { nextTier, tierFor } from "../lib/tiers";
 import { createFakeAuth, TEST_USER } from "../test/fakeAuth";
 import { createFakeServices, renderWithApp, type FakeServices } from "../test/fakeServices";
@@ -136,14 +136,89 @@ describe("profile page", () => {
     expect(within(recent).queryByRole("link", { name: "view battle" })).not.toBeInTheDocument();
   });
 
-  it("links each battle to its result on your own profile", async () => {
-    services.profiles = { me: { ...SHARIF, username: "coder_42" } };
-    renderWithApp(createFakeAuth(TEST_USER), services, "/u/coder_42");
-    const recent = await screen.findByRole("region", { name: "Recent battles" });
-    // The links appear once the signed-in user's own profile has loaded.
-    expect(
-      (await within(recent).findAllByRole("link", { name: "view battle" }))[0],
-    ).toHaveAttribute("href", "/battle/b-1");
+  describe("battle history on your own profile", () => {
+    const battle = (overrides: Partial<HistoryEntry>): HistoryEntry => ({
+      battleId: "b-1",
+      result: "win",
+      ratingBefore: 1200,
+      ratingAfter: 1216,
+      language: "python",
+      bestPassed: 5,
+      finishedAt: "2026-11-14T10:00:00Z",
+      problemTitle: "Count the Peaks",
+      opponent: "byte_rival",
+      opponentAvatar: "pixel",
+      ...overrides,
+    });
+    const renderMine = () => {
+      services.profiles = { me: { ...SHARIF, username: "coder_42" } };
+      return renderWithApp(createFakeAuth(TEST_USER), services, "/u/coder_42");
+    };
+
+    it("lists every battle, newest first, with problem, language, date and a link", async () => {
+      services.history = [
+        battle({
+          battleId: "b-2",
+          result: "loss",
+          ratingBefore: 1216,
+          ratingAfter: 1201,
+          language: "cpp",
+          opponent: "stack_sage",
+          opponentAvatar: "echo",
+          problemTitle: "Grid Escape",
+          finishedAt: "2026-11-15T10:00:00Z",
+        }),
+        battle({}),
+      ];
+      renderMine();
+      const history = await screen.findByRole("region", { name: "Battle history" });
+      expect(history).toHaveTextContent("BATTLE HISTORY · 2");
+      const rows = await within(history).findAllByRole("listitem");
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toHaveAccessibleName("Loss vs stack_sage");
+      expect(rows[0]).toHaveTextContent("Grid Escape · C++ (GCC 14)");
+      expect(rows[0]).toHaveTextContent("−15");
+      expect(within(rows[0]!).getByRole("link", { name: "view battle" })).toHaveAttribute(
+        "href",
+        "/battle/b-2",
+      );
+      expect(within(rows[0]!).getByRole("link", { name: "stack_sage" })).toHaveAttribute(
+        "href",
+        "/u/stack_sage",
+      );
+      expect(rows[1]).toHaveAccessibleName("Win vs byte_rival");
+      expect(rows[1]).toHaveTextContent("Count the Peaks · Python 3.12");
+      expect(rows[1]).toHaveTextContent("+16");
+      // Your own profile shows the full history instead of the short public list.
+      expect(screen.queryByRole("region", { name: "Recent battles" })).not.toBeInTheDocument();
+    });
+
+    it("invites you to your first battle when there are none", async () => {
+      renderMine();
+      const history = await screen.findByRole("region", { name: "Battle history" });
+      expect(await within(history).findByText(/No battles yet/)).toBeInTheDocument();
+      expect(within(history).getByRole("link", { name: "Find your first one" })).toHaveAttribute(
+        "href",
+        "/arena",
+      );
+    });
+
+    it("says when the history cannot load", async () => {
+      services.history = new Error("down");
+      renderMine();
+      const history = await screen.findByRole("region", { name: "Battle history" });
+      expect(await within(history).findByRole("alert")).toHaveTextContent(
+        "Could not load your battles",
+      );
+    });
+
+    it("is not shown on other players' profiles", async () => {
+      services.history = [battle({})];
+      renderWithApp(createFakeAuth(TEST_USER), services, "/u/sharif");
+      await screen.findByRole("region", { name: "Recent battles" });
+      expect(screen.queryByRole("region", { name: "Battle history" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "view battle" })).not.toBeInTheDocument();
+    });
   });
 
   it("handles a player with no battles", async () => {
