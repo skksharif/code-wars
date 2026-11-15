@@ -32,6 +32,16 @@ describe("routing and access", () => {
   });
 
   describe("phone menu", () => {
+    it("also links to the Arena and the Rankings", async () => {
+      renderApp(createFakeAuth(TEST_USER), "/arena");
+      await userEvent.click(await screen.findByRole("button", { name: "Menu" }));
+      const menu = screen.getByRole("navigation", { name: "Account" });
+      expect(within(menu).getByRole("link", { name: "Arena" })).toHaveAttribute("href", "/arena");
+      await userEvent.click(within(menu).getByRole("link", { name: "Rankings" }));
+      expect(await screen.findByRole("heading", { name: "Global rankings" })).toBeInTheDocument();
+      expect(screen.queryByRole("navigation", { name: "Account" })).not.toBeInTheDocument();
+    });
+
     it("opens from the hamburger with Profile and Log out", async () => {
       renderApp(createFakeAuth(TEST_USER), "/arena");
       const toggle = await screen.findByRole("button", { name: "Menu" });

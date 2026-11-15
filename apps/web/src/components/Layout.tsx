@@ -161,6 +161,23 @@ function MobileMenu({ profile, onSignOut }: { profile: Profile | null; onSignOut
               </span>
             </Link>
           ) : null}
+          {(
+            [
+              ["/arena", "Arena", <ArenaIcon key="a" />],
+              ["/rankings", "Rankings", <RankingsIcon key="r" />],
+            ] as const
+          ).map(([to, label, icon]) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `${item} border-t border-line font-display text-lg font-bold ${isActive ? "text-you" : "text-ink"}`
+              }
+            >
+              <span className="flex w-8 justify-center">{icon}</span>
+              {label}
+            </NavLink>
+          ))}
           <button
             type="button"
             onClick={() => {
