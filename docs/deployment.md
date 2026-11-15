@@ -49,6 +49,7 @@ I will not create accounts, projects or resources, or deploy anything, without y
 - Run the Worker: `npx wrangler dev` in `apps/worker`. Use `http://127.0.0.1:8787`, not `localhost`: on the development machine another program answers on the IPv6 `localhost:8787`.
 - End-to-end battle against real Supabase: `node scripts/e2e-battle.mjs` (add `--judge0` when the Worker runs with the real judge).
 - Concurrency and cron: `node scripts/e2e-race.mjs` (mock judge only).
+- Try the app in a browser: `node scripts/dev-accounts.mjs create` makes two confirmed local test accounts, `bot` makes the second one queue up and play, `remove` deletes them.
 
 ## 5. Release steps (to be executed only after Gate 6 approval)
 1. Apply migrations to Supabase (`supabase db push`) and seed problems.
