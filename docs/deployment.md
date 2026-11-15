@@ -13,7 +13,7 @@ Cloudflare Pages is now part of Workers, so the website is deployed as a Worker 
 ### Redeploying
 - API: `npx wrangler deploy` in `apps/worker`. Secrets (`SUPABASE_SERVICE_ROLE_KEY`, `JUDGE0_API_KEY`) are stored on Cloudflare with `wrangler secret put`.
 - Website: in `apps/web`, put `VITE_API_BASE_URL=<API address>` in `.env.production.local` (git-ignored), then `npx vite build` and `npx wrangler deploy`.
-- Migrations: `node scripts/db-apply.mjs`.
+- Hidden tests and migrations: `npm run seed:generate` (needs `HIDDEN_TEST_SALT` in `apps/worker/.dev.vars`; writes the git-ignored `supabase/seed/.generated/seed.sql`), then `node scripts/db-apply.mjs`.
 - Production check: `API_BASE_URL=<API address> node scripts/e2e-battle.mjs --judge0` (about 12 paid judge runs).
 Last updated: 2026-11-14
 

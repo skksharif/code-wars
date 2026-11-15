@@ -11,13 +11,30 @@ export interface ProblemDef {
   difficulty: Difficulty;
   statement: string;
   samples: { input: string; explanation?: string }[];
-  hidden: string[];
+  /** Hidden test inputs. A function so they are generated with the current salt. */
+  hidden: () => string[];
   solve: (input: string) => string;
 }
 
-/** Deterministic PRNG so generated tests are identical on every run. */
+let salt = 0;
+
+/**
+ * Sets the secret that randomised hidden tests are derived from. The repository
+ * is public, so without a secret anyone could compute the hidden inputs and
+ * their answers. With one, only the hand-written edge cases are knowable.
+ */
+export function setHiddenTestSalt(secret: string): void {
+  let h = 2166136261;
+  for (let i = 0; i < secret.length; i++) {
+    h ^= secret.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  salt = h >>> 0;
+}
+
+/** Deterministic PRNG: the same seed and salt always give the same tests. */
 function rng(seed: number): () => number {
-  let a = seed >>> 0;
+  let a = (seed ^ salt) >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
     let t = a;
@@ -39,6 +56,43 @@ function randArray(seed: number, n: number, lo: number, hi: number): number[] {
 function randString(seed: number, n: number, alphabet: string): string {
   const r = rng(seed);
   return Array.from({ length: n }, () => alphabet[randInt(r, 0, alphabet.length - 1)]).join("");
+}
+
+/** A bracket string of `length` characters; when `balanced` is false, one bracket is wrong. */
+function randomBrackets(seed: number, length: number, balanced: boolean): string {
+  const r = rng(seed);
+  const pairs: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+  const opens = Object.keys(pairs);
+  const out: string[] = [];
+  const stack: string[] = [];
+  while (out.length + stack.length < length) {
+    const room = length - out.length - stack.length;
+    if (stack.length > 0 && (room < 2 || r() < 0.45)) {
+      out.push(pairs[stack.pop()!]!);
+    } else {
+      const open = opens[randInt(r, 0, 2)]!;
+      stack.push(open);
+      out.push(open);
+    }
+  }
+  while (stack.length > 0) out.push(pairs[stack.pop()!]!);
+  if (!balanced) {
+    // Swap one closing bracket for a different kind, so the string is wrong.
+    const closers = out.flatMap((c, i) => (")]}".includes(c) ? [i] : []));
+    const at = closers[randInt(r, 0, closers.length - 1)]!;
+    out[at] = out[at] === ")" ? "]" : ")";
+  }
+  return out.join("");
+}
+
+/** A coin problem with 3-8 distinct coins and an amount up to 10000. */
+function randomCoins(seed: number): string {
+  const r = rng(seed);
+  const coins = new Set<number>();
+  const count = randInt(r, 3, 8);
+  while (coins.size < count) coins.add(randInt(r, 2, 997));
+  const amount = randInt(r, 5000, 10000);
+  return `${coins.size} ${amount}\n${[...coins].join(" ")}`;
 }
 
 const lines = (input: string): string[] => input.replace(/\r/g, "").trimEnd().split("\n");
@@ -70,7 +124,7 @@ Print one integer: the sum of all even values. Print \`0\` if there are none.
       { input: "5\n1 2 3 4 5", explanation: "2 + 4 = 6" },
       { input: "3\n7 9 11", explanation: "No even numbers." },
     ],
-    hidden: [
+    hidden: () => [
       "1\n0",
       "4\n-2 -4 3 8",
       withCount(randArray(101, 500, -1000, 1000)),
@@ -99,7 +153,7 @@ Print the number of vowels.
 ### Constraints
 - 1 ≤ length ≤ 100000`,
     samples: [{ input: "Hello World", explanation: "e, o, o" }, { input: "rhythm" }],
-    hidden: [
+    hidden: () => [
       "a",
       "AEIOU aeiou",
       "The quick brown fox jumps over the lazy dog",
@@ -130,7 +184,7 @@ Print the second largest distinct value, or \`-1\` if all values are equal.
       { input: "5\n3 9 9 4 1", explanation: "Distinct values are 9, 4, 3, 1." },
       { input: "3\n5 5 5" },
     ],
-    hidden: [
+    hidden: () => [
       "1\n42",
       "2\n0 1000000000",
       "6\n7 7 7 7 7 6",
@@ -158,7 +212,7 @@ Print the same words in reverse order, separated by single spaces.
 - 1 ≤ number of words ≤ 10000
 - Each word has 1 to 20 letters.`,
     samples: [{ input: "code wars is fun" }, { input: "solo" }],
-    hidden: [
+    hidden: () => [
       "a b",
       "one two three four five six seven",
       "same same same",
@@ -182,7 +236,7 @@ Print the single digit that remains.
 ### Constraints
 - \`n\` has between 1 and 1000 digits and no leading zeros (except \`0\` itself).`,
     samples: [{ input: "9875", explanation: "9+8+7+5 = 29, 2+9 = 11, 1+1 = 2" }, { input: "0" }],
-    hidden: [
+    hidden: () => [
       "9",
       "10",
       "999999999999999999999999999999",
@@ -214,7 +268,7 @@ Print the number of peaks.
       { input: "7\n1 3 2 5 5 4 6", explanation: "Only the 3 is a peak." },
       { input: "2\n1 2" },
     ],
-    hidden: [
+    hidden: () => [
       "1\n5",
       "3\n1 2 1",
       "5\n4 4 4 4 4",
@@ -246,13 +300,15 @@ Print \`YES\` if the string is balanced, otherwise \`NO\`.
 ### Constraints
 - 1 ≤ length ≤ 100000`,
     samples: [{ input: "{[()]}()" }, { input: "([)]", explanation: "The brackets cross over." }],
-    hidden: [
+    hidden: () => [
       "(",
       "))((",
       "()[]{}",
       "(".repeat(1500) + "[{}]" + ")".repeat(1500),
       "{".repeat(1000) + "}".repeat(999) + "]",
       "()".repeat(1200) + "(",
+      randomBrackets(1201, 2400, true),
+      randomBrackets(1202, 2400, false),
     ],
     solve: (input) => {
       const pairs: Record<string, string> = { ")": "(", "]": "[", "}": "{" };
@@ -282,7 +338,7 @@ Print the length of the longest substring with all distinct characters.
 ### Constraints
 - 1 ≤ length ≤ 100000`,
     samples: [{ input: "abcabcbb", explanation: '"abc" has length 3.' }, { input: "bbbbb" }],
-    hidden: [
+    hidden: () => [
       "a",
       "abcdefghijklmnopqrstuvwxyz",
       "abba",
@@ -324,7 +380,7 @@ Print the number of pairs \`(i, j)\` with \`i < j\` and \`a_i + a_j = k\`.
       { input: "5 6\n1 5 3 3 2", explanation: "(1,5) and (3,3)." },
       { input: "3 10\n1 2 3" },
     ],
-    hidden: [
+    hidden: () => [
       "1 2\n1",
       "4 0\n0 0 0 0",
       "6 -1\n-3 2 -1 0 5 -6",
@@ -366,7 +422,7 @@ Print two integers separated by a space: the number of intervals after merging, 
       },
       { input: "1\n5 5" },
     ],
-    hidden: [
+    hidden: () => [
       "2\n1 2\n3 4",
       "3\n-5 5\n-1 1\n0 0",
       "3\n-1000000000 0\n0 1000000000\n5 6",
@@ -428,13 +484,15 @@ Print the minimum number of coins needed, or \`-1\` if the amount cannot be made
       { input: "3 11\n1 5 6", explanation: "5 + 6. Greedy (6+5×1) would use more." },
       { input: "2 7\n2 4", explanation: "Only even amounts are possible." },
     ],
-    hidden: [
+    hidden: () => [
       "1 0\n7",
       "1 10000\n1",
       "3 6249\n186 419 83",
       "4 9999\n2 4 6 8",
       "5 10000\n3 7 11 4999 5003",
       "6 9973\n17 113 257 1009 2003 4001",
+      randomCoins(1301),
+      randomCoins(1302),
     ],
     solve: (input) => {
       const [first, second] = lines(input);
@@ -468,7 +526,7 @@ Print the minimum number of moves, or \`-1\` if the exit cannot be reached.
       { input: "3 4\nS.#.\n.##.\n...E", explanation: "Down, down, right, right, right." },
       { input: "1 3\nS#E" },
     ],
-    hidden: [
+    hidden: () => [
       "1 2\nSE",
       "3 3\nS..\n###\n..E",
       "5 5\nS...#\n.##.#\n.#..#\n.#.##\n...E.",

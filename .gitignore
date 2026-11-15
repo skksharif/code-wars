@@ -10,6 +10,9 @@ coverage/
 .env.*
 !.env.example
 .dev.vars
+
+# Generated seed with hidden tests and answers: never commit
+supabase/seed/.generated/
 .dev.vars.*
 !.dev.vars.example
 

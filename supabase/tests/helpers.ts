@@ -2,6 +2,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { expect } from "vitest";
+import { buildSeedSql } from "../seed/generate.ts";
+
+/** Fixed salt for tests only. Production uses a secret salt (see generate.ts). */
+export const TEST_SALT = "test-salt-not-used-in-production";
 
 const SUPABASE_DIR = join(import.meta.dirname, "..");
 const MIGRATIONS_DIR = join(SUPABASE_DIR, "migrations");
@@ -16,7 +20,7 @@ export async function createDb(): Promise<PGlite> {
   for (const name of migrations) {
     await db.exec(readFileSync(join(MIGRATIONS_DIR, name), "utf8"));
   }
-  await db.exec(readFileSync(join(SUPABASE_DIR, "seed", "seed.sql"), "utf8"));
+  await db.exec(buildSeedSql(TEST_SALT));
   return db;
 }
 

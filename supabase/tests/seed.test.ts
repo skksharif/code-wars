@@ -1,9 +1,8 @@
-import { readFileSync } from "node:fs";
 import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildSeedSql, SEED_PATH } from "../seed/generate.ts";
-import { PROBLEMS } from "../seed/problems.ts";
-import { all, createDb } from "./helpers.ts";
+import { buildSeedSql } from "../seed/generate.ts";
+import { PROBLEMS, setHiddenTestSalt } from "../seed/problems.ts";
+import { all, createDb, TEST_SALT } from "./helpers.ts";
 
 let db: PGlite;
 beforeAll(async () => {
@@ -12,8 +11,34 @@ beforeAll(async () => {
 afterAll(() => db.close());
 
 describe("seed problems", () => {
-  it("seed.sql is up to date with problems.ts", () => {
-    expect(readFileSync(SEED_PATH, "utf8")).toBe(buildSeedSql());
+  it("derives randomised hidden tests from the secret salt", () => {
+    const hiddenWith = (salt: string) => {
+      setHiddenTestSalt(salt);
+      return PROBLEMS.map((p) => p.hidden());
+    };
+    const a1 = hiddenWith("first-secret-salt-value");
+    const a2 = hiddenWith("first-secret-salt-value");
+    const b = hiddenWith("other-secret-salt-value");
+    setHiddenTestSalt(TEST_SALT);
+
+    expect(a2).toEqual(a1);
+    // Every problem has at least one hidden test that changes with the salt.
+    PROBLEMS.forEach((p, i) => {
+      const changed = a1[i]!.filter((input, j) => input !== b[i]![j]).length;
+      expect(changed, p.slug).toBeGreaterThan(0);
+    });
+    // Samples are public by design and do not depend on the salt.
+    const sampleJson = JSON.stringify({
+      input: "5\n1 2 3 4 5",
+      output: "6",
+      explanation: "2 + 4 = 6",
+    });
+    expect(buildSeedSql("first-secret-salt-value")).toContain(sampleJson);
+    expect(buildSeedSql("other-secret-salt-value")).toContain(sampleJson);
+  });
+
+  it("refuses a short salt", () => {
+    expect(() => buildSeedSql("short")).toThrow("at least 16 characters");
   });
 
   it("every problem has two samples and at least five hidden tests", async () => {
@@ -65,7 +90,7 @@ describe("seed problems", () => {
 
   it("test inputs have no blank lines, carriage returns or stray whitespace", () => {
     for (const p of PROBLEMS) {
-      for (const input of [...p.hidden, ...p.samples.map((s) => s.input)]) {
+      for (const input of [...p.hidden(), ...p.samples.map((s) => s.input)]) {
         expect(input.length, p.slug).toBeGreaterThan(0);
         expect(input, p.slug).not.toMatch(/\n\n|\s$|^\s|\r/);
       }

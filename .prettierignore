@@ -4,5 +4,5 @@ coverage
 .wrangler
 package-lock.json
 docs
-supabase/seed/seed.sql
+supabase/seed/.generated
 dist-types

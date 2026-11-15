@@ -9,7 +9,7 @@
  * table the Supabase CLI uses. The connection string is read from
  * apps/worker/.dev.vars (git-ignored) or the environment; it is never printed.
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
 
@@ -108,8 +108,12 @@ try {
       }
     }
 
+    const seedPath = join(root, "supabase/seed/.generated/seed.sql");
+    if (!existsSync(seedPath)) {
+      throw new Error("Seed file missing. Run `npm run seed:generate` first.");
+    }
     await client.query("begin");
-    await client.query(readFileSync(join(root, "supabase/seed/seed.sql"), "utf8"));
+    await client.query(readFileSync(seedPath, "utf8"));
     await client.query("commit");
     const { rows } = await client.query(
       "select (select count(*) from public.problems) as problems, (select count(*) from public.problem_tests) as tests",
