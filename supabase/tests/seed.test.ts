@@ -62,8 +62,8 @@ describe("seed problems", () => {
     );
     expect(rows).toEqual([
       { difficulty: "easy", n: 6 },
-      { difficulty: "hard", n: 2 },
-      { difficulty: "medium", n: 4 },
+      { difficulty: "hard", n: 4 },
+      { difficulty: "medium", n: 5 },
     ]);
   });
 
@@ -86,6 +86,16 @@ describe("seed problems", () => {
     expect(solve("fewest-coins", "2 7\n2 4")).toBe("-1");
     expect(solve("grid-escape", "3 4\nS.#.\n.##.\n...E")).toBe("5");
     expect(solve("grid-escape", "1 3\nS#E")).toBe("-1");
+    expect(solve("rotate-array", "5 2\n1 2 3 4 5")).toBe("4 5 1 2 3");
+    expect(solve("rotate-array", "3 7\n10 20 30")).toBe("30 10 20");
+    expect(solve("rotate-array", "1 1000000000\n9")).toBe("9");
+    expect(solve("longest-increasing", "8\n10 9 2 5 3 7 101 18")).toBe("4");
+    expect(solve("longest-increasing", "5\n5 5 5 5 5")).toBe("1");
+    expect(solve("longest-increasing", "6\n1 2 3 4 5 6")).toBe("6");
+    expect(solve("count-islands", "4 5\n##..#\n#...#\n..#..\n....#")).toBe("4");
+    expect(solve("count-islands", "2 2\n..\n..")).toBe("0");
+    expect(solve("count-islands", "3 3\n#.#\n.#.\n#.#")).toBe("5");
+    expect(solve("count-islands", "3 3\n###\n#.#\n###")).toBe("1");
   });
 
   it("test inputs have no blank lines, carriage returns or stray whitespace", () => {

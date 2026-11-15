@@ -177,6 +177,47 @@ describe("battle room", () => {
     await waitFor(() => expect(services.api.getBattle.mock.calls.length).toBeGreaterThan(1));
   });
 
+  it("counts down and disables Submit during the 10 s cooldown, separately from Run", async () => {
+    openBattle();
+    await userEvent.click(await screen.findByRole("button", { name: "Submit" }));
+
+    const waiting = await screen.findByRole("button", { name: /^Submit \((10|9)s\)$/ });
+    expect(waiting).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Run samples" })).toBeEnabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Run samples" }));
+    expect(await screen.findByRole("button", { name: /^Run samples \([45]s\)$/ })).toBeDisabled();
+  });
+
+  it("uses the server's retry time when it reports a cooldown", async () => {
+    services.api.submit.mockRejectedValue(
+      new ApiError("COOLDOWN", "Wait 7 seconds before trying again.", 429, 6400),
+    );
+    openBattle();
+    await userEvent.click(await screen.findByRole("button", { name: "Submit" }));
+    expect(await screen.findByRole("button", { name: /^Submit \([67]s\)$/ })).toBeDisabled();
+  });
+
+  it("re-enables Submit when the cooldown ends", async () => {
+    services.api.submit.mockRejectedValue(
+      new ApiError("COOLDOWN", "Wait 1 second before trying again.", 429, 300),
+    );
+    openBattle();
+    await userEvent.click(await screen.findByRole("button", { name: "Submit" }));
+    expect(await screen.findByRole("button", { name: "Submit (1s)" })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: "Submit" })).toBeEnabled();
+  });
+
+  it("starts no cooldown when the judge is unavailable, so the player can retry at once", async () => {
+    services.api.submit.mockRejectedValue(
+      new ApiError("JUDGE_UNAVAILABLE", "The code judge is unavailable.", 502),
+    );
+    openBattle();
+    await userEvent.click(await screen.findByRole("button", { name: "Submit" }));
+    await screen.findByRole("alert");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+  });
+
   it("shows compiler output", async () => {
     services.api.submit.mockResolvedValue({
       submissionId: "s",

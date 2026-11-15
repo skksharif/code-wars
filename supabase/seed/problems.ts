@@ -574,4 +574,150 @@ Print the minimum number of moves, or \`-1\` if the exit cannot be reached.
       return "-1";
     },
   },
+  {
+    slug: "rotate-array",
+    title: "Rotate the Array",
+    difficulty: "medium",
+    statement: `Rotate a list to the right by \`k\` steps: each step moves the last element to the front.
+
+### Input
+The first line contains two integers \`n\` and \`k\`. The second line contains \`n\` integers \`a_i\`.
+
+### Output
+Print the rotated list on one line, separated by single spaces.
+
+### Constraints
+- 1 ≤ n ≤ 100000
+- 0 ≤ k ≤ 10^9
+- -10^9 ≤ a_i ≤ 10^9`,
+    samples: [
+      { input: "5 2\n1 2 3 4 5", explanation: "5 moves to the front, then 4." },
+      { input: "3 7\n10 20 30", explanation: "Rotating 3 elements by 7 is the same as by 1." },
+    ],
+    hidden: () => [
+      "1 1000000000\n9",
+      "4 0\n1 2 3 4",
+      "4 4\n-1 -2 -3 -4",
+      `2000 999999937\n${randArray(1401, 2000, -1_000_000_000, 1_000_000_000).join(" ")}`,
+      `3000 1499\n${randArray(1402, 3000, 0, 9).join(" ")}`,
+    ],
+    solve: (input) => {
+      const [first, second] = lines(input);
+      const [n, k] = ints(first) as [number, number];
+      const a = ints(second);
+      const shift = k % n;
+      return [...a.slice(n - shift), ...a.slice(0, n - shift)].join(" ");
+    },
+  },
+  {
+    slug: "longest-increasing",
+    title: "Longest Climb",
+    difficulty: "hard",
+    statement: `Pick some elements of a list, keeping their order, so that each picked element is **strictly** greater than the one before. What is the most elements you can pick?
+
+### Input
+The first line contains an integer \`n\`. The second line contains \`n\` integers \`a_i\`.
+
+### Output
+Print the length of the longest strictly increasing subsequence.
+
+### Constraints
+- 1 ≤ n ≤ 100000
+- -10^9 ≤ a_i ≤ 10^9
+- An O(n²) solution is too slow for the largest tests.`,
+    samples: [
+      { input: "8\n10 9 2 5 3 7 101 18", explanation: "For example 2, 3, 7, 18." },
+      { input: "5\n5 5 5 5 5", explanation: "Equal values do not count as increasing." },
+    ],
+    hidden: () => [
+      "1\n7",
+      "6\n1 2 3 4 5 6",
+      "6\n6 5 4 3 2 1",
+      withCount(randArray(1501, 3000, -1_000_000_000, 1_000_000_000)),
+      withCount(randArray(1502, 3000, 0, 50)),
+      withCount(Array.from({ length: 3000 }, (_, i) => (i % 2 === 0 ? i : -i))),
+    ],
+    solve: (input) => {
+      const a = ints(lines(input)[1]);
+      // tails[len] = smallest possible last value of an increasing run of length len + 1.
+      const tails: number[] = [];
+      for (const value of a) {
+        let lo = 0;
+        let hi = tails.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (tails[mid]! < value) lo = mid + 1;
+          else hi = mid;
+        }
+        tails[lo] = value;
+      }
+      return String(tails.length);
+    },
+  },
+  {
+    slug: "count-islands",
+    title: "Count the Islands",
+    difficulty: "hard",
+    statement: `A map shows land (\`#\`) and water (\`.\`). Land cells that touch up, down, left or right belong to the same island. Diagonal touching does not join islands. Count the islands.
+
+### Input
+The first line contains two integers \`r\` and \`c\`. Each of the next \`r\` lines contains \`c\` characters, each \`#\` or \`.\`.
+
+### Output
+Print the number of islands.
+
+### Constraints
+- 1 ≤ r, c ≤ 500
+- Deep recursion may overflow the stack on large maps; an iterative search is safer.`,
+    samples: [
+      { input: "4 5\n##..#\n#...#\n..#..\n....#", explanation: "Four islands." },
+      { input: "2 2\n..\n..", explanation: "No land at all." },
+    ],
+    hidden: () => [
+      "1 1\n#",
+      "3 3\n###\n#.#\n###",
+      "3 3\n#.#\n.#.\n#.#",
+      ...[1601, 1602, 1603].map((seed, index) => {
+        const r = rng(seed);
+        const size = 60 + index * 20;
+        const density = [0.35, 0.5, 0.6][index]!;
+        const rows = Array.from({ length: size }, () =>
+          Array.from({ length: size }, (): string => (r() < density ? "#" : ".")).join(""),
+        );
+        return `${size} ${size}\n${rows.join("\n")}`;
+      }),
+    ],
+    solve: (input) => {
+      const rows = lines(input);
+      const [r, c] = ints(rows[0]) as [number, number];
+      const grid = rows.slice(1, r + 1);
+      const seen = Array.from({ length: r }, () => new Array<boolean>(c).fill(false));
+      let islands = 0;
+      for (let i = 0; i < r; i++) {
+        for (let j = 0; j < c; j++) {
+          if (grid[i]![j] !== "#" || seen[i]![j]) continue;
+          islands++;
+          seen[i]![j] = true;
+          const stack: [number, number][] = [[i, j]];
+          while (stack.length > 0) {
+            const [y, x] = stack.pop()!;
+            for (const [dy, dx] of [
+              [1, 0],
+              [-1, 0],
+              [0, 1],
+              [0, -1],
+            ] as const) {
+              const ny = y + dy;
+              const nx = x + dx;
+              if (ny < 0 || nx < 0 || ny >= r || nx >= c) continue;
+              if (grid[ny]![nx] !== "#" || seen[ny]![nx]) continue;
+              seen[ny]![nx] = true;
+              stack.push([ny, nx]);
+            }
+          }
+        }
+      }
+      return String(islands);
+    },
+  },
 ];

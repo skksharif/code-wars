@@ -1,5 +1,5 @@
-import { LANGUAGE_LABELS, LANGUAGES, type Language } from "@code-wars/shared";
-import { lazy, Suspense, useState } from "react";
+import { LANGUAGE_LABELS, LANGUAGES, LIMITS, type Language } from "@code-wars/shared";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Button } from "../components/ui";
 import { ApiError, type RunResult, type SubmitResult } from "../lib/api";
 import { useServices } from "../services";
@@ -7,6 +7,13 @@ import { loadCode, loadLanguage, saveCode, saveLanguage } from "./codeStore";
 import { VERDICT_LABELS } from "./labels";
 
 const CodeEditor = lazy(() => import("./CodeEditor"));
+
+type Kind = "run" | "submit";
+
+const COOLDOWN_MS: Record<Kind, number> = {
+  run: LIMITS.runCooldownMs,
+  submit: LIMITS.submitCooldownMs,
+};
 
 type Outcome =
   | { kind: "run"; result: RunResult }
@@ -28,6 +35,19 @@ export function EditorPanel({
   const [code, setCode] = useState(() => loadCode(battleId, loadLanguage()));
   const [busy, setBusy] = useState<"run" | "submit" | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  // When each button becomes usable again (ms since epoch). The server enforces
+  // the real cooldown; this only mirrors it so the buttons can count down.
+  const [readyAt, setReadyAt] = useState<Record<Kind, number>>({ run: 0, submit: 0 });
+  const [now, setNow] = useState(() => Date.now());
+
+  const coolingDown = readyAt.run > now || readyAt.submit > now;
+  useEffect(() => {
+    if (!coolingDown) return;
+    const tick = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(tick);
+  }, [coolingDown]);
+
+  const waitSeconds = (kind: Kind) => Math.max(0, Math.ceil((readyAt[kind] - now) / 1000));
 
   function changeLanguage(next: Language) {
     setLanguage(next);
@@ -40,7 +60,12 @@ export function EditorPanel({
     saveCode(battleId, language, next);
   }
 
-  async function send(kind: "run" | "submit") {
+  async function send(kind: Kind) {
+    const startedAt = Date.now();
+    const startCooldown = (until: number) => {
+      setReadyAt((current) => ({ ...current, [kind]: until }));
+      setNow(Date.now());
+    };
     setBusy(kind);
     setOutcome(null);
     try {
@@ -50,7 +75,12 @@ export function EditorPanel({
         setOutcome({ kind, result: await api.submit(battleId, language, code) });
         onSubmitted();
       }
+      // The server's cooldown counts from when the request arrived.
+      startCooldown(startedAt + COOLDOWN_MS[kind]);
     } catch (caught) {
+      if (caught instanceof ApiError && caught.code === "COOLDOWN" && caught.retryAfterMs) {
+        startCooldown(Date.now() + caught.retryAfterMs);
+      }
       setOutcome({
         kind: "error",
         message: caught instanceof ApiError ? caught.message : "Something went wrong.",
@@ -61,6 +91,8 @@ export function EditorPanel({
   }
 
   const blocked = !enabled || busy !== null || code.trim().length === 0;
+  const label = (kind: Kind, idle: string, working: string) =>
+    busy === kind ? working : waitSeconds(kind) > 0 ? `${idle} (${waitSeconds(kind)}s)` : idle;
 
   return (
     <section aria-label="Editor" className="flex min-w-0 flex-1 flex-col">
@@ -93,11 +125,18 @@ export function EditorPanel({
 
       <div className="flex flex-col gap-3 border-t border-line bg-panel px-4 py-3">
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <Button variant="outline" disabled={blocked} onClick={() => void send("run")}>
-            {busy === "run" ? "Running…" : "Run samples"}
+          <Button
+            variant="outline"
+            disabled={blocked || waitSeconds("run") > 0}
+            onClick={() => void send("run")}
+          >
+            {label("run", "Run samples", "Running…")}
           </Button>
-          <Button disabled={blocked} onClick={() => void send("submit")}>
-            {busy === "submit" ? "Judging…" : "Submit"}
+          <Button
+            disabled={blocked || waitSeconds("submit") > 0}
+            onClick={() => void send("submit")}
+          >
+            {label("submit", "Submit", "Judging…")}
           </Button>
         </div>
         <OutcomeView outcome={outcome} />
