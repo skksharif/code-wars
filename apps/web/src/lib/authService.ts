@@ -41,6 +41,8 @@ function friendly(message: string | undefined, fallback: string): string {
   if (text.includes("already registered")) return "An account with this email already exists.";
   if (text.includes("invalid login")) return "Wrong email or password.";
   if (text.includes("password")) return "Use a password of at least 6 characters.";
+  if (text.includes("email rate limit"))
+    return "Too many sign-up emails were sent recently. Try again in an hour.";
   if (text.includes("rate limit")) return "Too many attempts. Wait a minute and try again.";
   return fallback;
 }
