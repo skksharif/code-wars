@@ -13,6 +13,7 @@ import { Button } from "../components/ui";
 import { ApiError } from "../lib/api";
 import type { HistoryEntry, PublicProfile } from "../lib/live";
 import { nextTier, tierFor } from "../lib/tiers";
+import { PHONE_QUERY, useMediaQuery } from "../lib/useMediaQuery";
 import { useServices } from "../services";
 
 const RESULT = {
@@ -363,6 +364,8 @@ export function ProfilePage() {
   const { user, profile: me, refreshProfile } = useAuth();
   const [reload, setReload] = useState(0);
   const [profile, setProfile] = useState<PublicProfile | null | "loading" | "error">("loading");
+  const phone = useMediaQuery(PHONE_QUERY);
+  const [tab, setTab] = useState<"overview" | "battles">("overview");
 
   useEffect(() => {
     let active = true;
@@ -412,19 +415,170 @@ export function ProfilePage() {
   const languageTotal = languages.reduce((sum, [, count]) => sum + count, 0);
   const main = [...languages].sort((x, y) => y[1] - x[1])[0];
 
+  const mainLanguage = main ? LANGUAGE_LABELS[main[0]].split(" ")[0]! : "–";
+  const picker = isMe ? (
+    <AvatarPicker
+      current={profile.avatar}
+      onSaved={async () => {
+        await refreshProfile();
+        setReload((n) => n + 1);
+      }}
+    />
+  ) : null;
+  const chart = (
+    <figure className="m-0 flex flex-col gap-2 border border-line bg-panel px-4 py-3 md:px-5 md:py-4">
+      <figcaption className="text-xs tracking-[0.14em] text-muted">RATING HISTORY</figcaption>
+      <RatingChart history={profile.ratingHistory} color={tier.color} />
+    </figure>
+  );
+  const breakdown = (
+    <div className="grid grid-cols-2 gap-3">
+      <section
+        aria-label="Languages"
+        className="min-w-0 border border-line bg-panel px-3 py-3 md:px-5 md:py-4"
+      >
+        <h2 className="m-0 mb-2 text-xs font-normal tracking-[0.14em] text-muted">LANGUAGES</h2>
+        {languages.length === 0 ? (
+          <p className="m-0 text-muted">No battles yet.</p>
+        ) : (
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {languages
+              .sort((x, y) => y[1] - x[1])
+              .map(([language, count]) => {
+                const share = Math.round((count / languageTotal) * 100);
+                return (
+                  <li key={language} className="flex flex-col gap-1">
+                    <span className="flex justify-between font-mono text-sm">
+                      <span>{LANGUAGE_LABELS[language]}</span>
+                      <span>{share}%</span>
+                    </span>
+                    <span aria-hidden="true" className="h-2 bg-line">
+                      <span className="block h-2 bg-you" style={{ width: `${share}%` }} />
+                    </span>
+                  </li>
+                );
+              })}
+          </ul>
+        )}
+      </section>
+      <section
+        aria-label="Wins by difficulty"
+        className="min-w-0 border border-line bg-panel px-3 py-3 md:px-5 md:py-4"
+      >
+        <h2 className="m-0 mb-2 text-xs font-normal tracking-[0.14em] text-muted">
+          WINS BY DIFFICULTY
+        </h2>
+        {(["easy", "medium", "hard"] as const).map((level) => (
+          <div key={level} className="flex justify-between font-mono text-sm leading-7">
+            <span className="capitalize">{level}</span>
+            <span>{profile.winsByDifficulty[level]}</span>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+  const battles =
+    isMe && user ? (
+      <BattleHistory userId={user.id} />
+    ) : (
+      <section
+        aria-label="Recent battles"
+        className="border border-line bg-panel px-4 py-3 md:px-5 md:py-4"
+      >
+        <h2 className="m-0 mb-1 text-xs font-normal tracking-[0.14em] text-muted">
+          RECENT BATTLES
+        </h2>
+        {profile.recentBattles.length === 0 ? (
+          <p className="m-0 text-muted">No battles yet.</p>
+        ) : (
+          <ul className="m-0 list-none p-0">
+            {profile.recentBattles.map((battle) => {
+              const result = RESULT[battle.result];
+              return (
+                <li
+                  key={battle.battleId}
+                  className="flex min-h-11 items-center justify-between gap-3 border-t border-line py-2"
+                >
+                  <span>
+                    <b className={`font-display uppercase ${result.color}`}>{result.label}</b> vs{" "}
+                    <Avatar id={battle.opponentAvatar} size={26} decorative />{" "}
+                    <Link to={`/u/${battle.opponent}`} className="text-you">
+                      {battle.opponent}
+                    </Link>
+                  </span>
+                  <span className="font-mono">
+                    <Delta before={battle.ratingBefore} after={battle.ratingAfter} />{" "}
+                    <span className="text-muted">· {timeAgo(battle.finishedAt)}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    );
+
+  if (phone) {
+    return (
+      <main className="flex w-full flex-col gap-3 px-4 py-4">
+        <PhoneHeader profile={profile} />
+        <dl className="m-0 grid grid-cols-4 border border-line bg-panel">
+          {(
+            [
+              ["Battles", String(played), ""],
+              ["Win rate", winRate, "text-you"],
+              ["Streak", streak, ""],
+              ["Main", mainLanguage, ""],
+            ] as const
+          ).map(([label, value, tone], index) => (
+            <div
+              key={label}
+              className={`flex min-w-0 flex-col-reverse items-center py-2 ${index > 0 ? "border-l border-line" : ""}`}
+            >
+              <dt className="text-[10px] tracking-[0.12em] text-muted uppercase">{label}</dt>
+              <dd className={`m-0 truncate font-display text-xl font-bold ${tone}`}>{value}</dd>
+            </div>
+          ))}
+        </dl>
+        {picker}
+        <div role="tablist" aria-label="Profile sections" className="flex border-b border-line">
+          {(["overview", "battles"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={`h-11 flex-1 cursor-pointer border-0 border-b-2 bg-transparent font-display text-sm font-semibold tracking-[0.14em] uppercase ${
+                tab === key ? "border-you text-you" : "border-transparent text-muted"
+              }`}
+            >
+              {key === "overview" ? "Overview" : `Battles · ${played}`}
+            </button>
+          ))}
+        </div>
+        {tab === "overview" ? (
+          <div role="tabpanel" aria-label="Overview" className="flex flex-col gap-3">
+            {chart}
+            {breakdown}
+            <p className="m-0 text-center font-mono text-xs text-muted">
+              Playing since {monthYear(profile.memberSince)}
+            </p>
+          </div>
+        ) : (
+          <div role="tabpanel" aria-label="Battles">
+            {battles}
+          </div>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-wrap items-start justify-center gap-6 px-4 py-6 md:gap-10 md:px-[5%] md:py-10">
       <div className="flex w-full max-w-[420px] flex-none flex-col gap-4">
         <PlayerCard profile={profile} />
-        {isMe ? (
-          <AvatarPicker
-            current={profile.avatar}
-            onSaved={async () => {
-              await refreshProfile();
-              setReload((n) => n + 1);
-            }}
-          />
-        ) : null}
+        {picker}
       </div>
 
       <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-5">
@@ -432,93 +586,58 @@ export function ProfilePage() {
           <StatTile label="Battles" value={String(played)} />
           <StatTile label="Win rate" value={winRate} tone="text-you" />
           <StatTile label="Streak" value={streak} />
-          <StatTile label="Main" value={main ? LANGUAGE_LABELS[main[0]].split(" ")[0]! : "–"} />
+          <StatTile label="Main" value={mainLanguage} />
         </div>
-
-        <figure className="m-0 flex flex-col gap-2 border border-line bg-panel px-5 py-4">
-          <figcaption className="text-xs tracking-[0.14em] text-muted">RATING HISTORY</figcaption>
-          <RatingChart history={profile.ratingHistory} color={tier.color} />
-        </figure>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <section aria-label="Languages" className="border border-line bg-panel px-5 py-4">
-            <h2 className="m-0 mb-2 text-xs font-normal tracking-[0.14em] text-muted">LANGUAGES</h2>
-            {languages.length === 0 ? (
-              <p className="m-0 text-muted">No battles yet.</p>
-            ) : (
-              <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                {languages
-                  .sort((x, y) => y[1] - x[1])
-                  .map(([language, count]) => {
-                    const share = Math.round((count / languageTotal) * 100);
-                    return (
-                      <li key={language} className="flex flex-col gap-1">
-                        <span className="flex justify-between font-mono text-sm">
-                          <span>{LANGUAGE_LABELS[language]}</span>
-                          <span>{share}%</span>
-                        </span>
-                        <span aria-hidden="true" className="h-2 bg-line">
-                          <span className="block h-2 bg-you" style={{ width: `${share}%` }} />
-                        </span>
-                      </li>
-                    );
-                  })}
-              </ul>
-            )}
-          </section>
-          <section
-            aria-label="Wins by difficulty"
-            className="border border-line bg-panel px-5 py-4"
-          >
-            <h2 className="m-0 mb-2 text-xs font-normal tracking-[0.14em] text-muted">
-              WINS BY DIFFICULTY
-            </h2>
-            {(["easy", "medium", "hard"] as const).map((level) => (
-              <div key={level} className="flex justify-between font-mono text-sm leading-7">
-                <span className="capitalize">{level}</span>
-                <span>{profile.winsByDifficulty[level]}</span>
-              </div>
-            ))}
-          </section>
-        </div>
-
-        {isMe && user ? (
-          <BattleHistory userId={user.id} />
-        ) : (
-          <section aria-label="Recent battles" className="border border-line bg-panel px-5 py-4">
-            <h2 className="m-0 mb-1 text-xs font-normal tracking-[0.14em] text-muted">
-              RECENT BATTLES
-            </h2>
-            {profile.recentBattles.length === 0 ? (
-              <p className="m-0 text-muted">No battles yet.</p>
-            ) : (
-              <ul className="m-0 list-none p-0">
-                {profile.recentBattles.map((battle) => {
-                  const result = RESULT[battle.result];
-                  return (
-                    <li
-                      key={battle.battleId}
-                      className="flex min-h-11 items-center justify-between gap-3 border-t border-line py-2"
-                    >
-                      <span>
-                        <b className={`font-display uppercase ${result.color}`}>{result.label}</b>{" "}
-                        vs <Avatar id={battle.opponentAvatar} size={26} decorative />{" "}
-                        <Link to={`/u/${battle.opponent}`} className="text-you">
-                          {battle.opponent}
-                        </Link>
-                      </span>
-                      <span className="font-mono">
-                        <Delta before={battle.ratingBefore} after={battle.ratingAfter} />{" "}
-                        <span className="text-muted">· {timeAgo(battle.finishedAt)}</span>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        )}
+        {chart}
+        {breakdown}
+        {battles}
       </div>
     </main>
+  );
+}
+
+/** Phones: the trading card shrunk to one compact row (design option A). */
+function PhoneHeader({ profile }: { profile: PublicProfile }) {
+  const tier = tierFor(profile.rating);
+  const next = nextTier(profile.rating);
+  return (
+    <article
+      aria-label={`Player card for ${profile.username}`}
+      className="flex items-center gap-3 border bg-panel px-3 py-3"
+      style={{ borderColor: tier.color, boxShadow: `0 0 18px ${tier.glow}` }}
+    >
+      <Avatar id={profile.avatar} size={76} frame={tier.color} shape="hexagon" />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="m-0 font-mono text-[11px] text-muted">#{profile.rank} GLOBAL</p>
+        <h1
+          className={`m-0 font-display leading-tight font-bold break-all ${
+            profile.username.length > 12 ? "text-lg" : "text-2xl"
+          }`}
+        >
+          {profile.username}
+        </h1>
+        <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span
+            className="px-2 font-display text-[11px] font-bold tracking-[0.16em] text-ground uppercase"
+            style={{ background: tier.color }}
+          >
+            {tier.name}
+          </span>
+          <span className="font-mono text-[11px] text-muted">
+            {next ? `${next.pointsNeeded} to ${next.tier.name}` : "Top tier"}
+          </span>
+        </p>
+      </div>
+      <div className="flex flex-none flex-col items-end">
+        <span
+          className="font-display text-4xl leading-none font-bold"
+          style={{ color: tier.color, textShadow: `0 0 18px ${tier.glow}` }}
+          aria-label={`Rating ${profile.rating}`}
+        >
+          {profile.rating}
+        </span>
+        <span className="font-mono text-[11px] text-muted">PEAK {profile.peakRating}</span>
+      </div>
+    </article>
   );
 }

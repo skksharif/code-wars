@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../lib/api";
 import type { HistoryEntry, PublicProfile } from "../lib/live";
 import { nextTier, tierFor } from "../lib/tiers";
@@ -337,5 +337,76 @@ describe("avatars", () => {
     await user.click(screen.getByRole("button", { name: "Save avatar" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not reach the server.");
     expect(screen.getByRole("region", { name: "Choose your avatar" })).toBeInTheDocument();
+  });
+});
+
+describe("profile page on phones", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) =>
+        ({ matches: query === "(max-width: 767px)", media: query }) as MediaQueryList,
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows a compact header and a four-stat row", async () => {
+    renderWithApp(createFakeAuth(), services, "/u/sharif");
+    const card = await screen.findByRole("article", { name: "Player card for sharif" });
+    expect(within(card).getByRole("heading", { name: "sharif" })).toBeInTheDocument();
+    expect(card).toHaveTextContent("#7 GLOBAL");
+    expect(screen.getByText(/Playing since/)).toBeInTheDocument();
+    expect(card).toHaveTextContent("Gold");
+    expect(card).toHaveTextContent("158 to Platinum");
+    expect(within(card).getByLabelText("Rating 1342")).toBeInTheDocument();
+    expect(card).toHaveTextContent("PEAK 1388");
+    // Each label comes before its value in the markup (shown value-on-top).
+    const stats = screen.getByText("Win rate").closest("dl")!;
+    expect(stats).toHaveTextContent("Battles24");
+    expect(stats).toHaveTextContent("Win rate63%");
+    expect(stats).toHaveTextContent("Streak3 W");
+    expect(stats).toHaveTextContent("MainPython");
+  });
+
+  it("splits the rest into Overview and Battles tabs", async () => {
+    renderWithApp(createFakeAuth(), services, "/u/sharif");
+    const overview = await screen.findByRole("tab", { name: "Overview" });
+    expect(overview).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("img", { name: /Rating from 1200 to 1342/ })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Languages" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Recent battles" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Battles · 24" }));
+    const recent = screen.getByRole("region", { name: "Recent battles" });
+    expect(within(recent).getAllByRole("listitem")[0]).toHaveTextContent("Win vs byte_rival");
+    expect(screen.queryByRole("region", { name: "Languages" })).not.toBeInTheDocument();
+  });
+
+  it("puts your full history and the avatar picker on your own profile", async () => {
+    services.profiles = { me: { ...SHARIF, username: "coder_42" } };
+    services.history = [
+      {
+        battleId: "b-9",
+        result: "win",
+        ratingBefore: 1200,
+        ratingAfter: 1216,
+        language: "java",
+        bestPassed: 5,
+        finishedAt: "2026-11-15T10:00:00Z",
+        problemTitle: "Count the Peaks",
+        opponent: "byte_rival",
+        opponentAvatar: "pixel",
+      },
+    ];
+    renderWithApp(createFakeAuth(TEST_USER), services, "/u/coder_42");
+    expect(await screen.findByRole("button", { name: "Change avatar" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /Battles/ }));
+    const history = await screen.findByRole("region", { name: "Battle history" });
+    expect(await within(history).findByRole("link", { name: "view battle" })).toHaveAttribute(
+      "href",
+      "/battle/b-9",
+    );
   });
 });
