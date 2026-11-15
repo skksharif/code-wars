@@ -1,6 +1,20 @@
 # Deployment
 
-Status: **Gate 2 approved 2026-11-14 (design only). Nothing is deployed and no accounts or resources have been created.**
+Status: **Deployed 2026-11-15 (Gate 6 approved).**
+
+| Piece | Live address | Cloudflare name |
+|---|---|---|
+| Website | https://code-wars.unified-loans-commercial.workers.dev | Worker `code-wars` (static assets only, `apps/web/wrangler.jsonc`) |
+| API | https://code-wars-api.unified-loans-commercial.workers.dev | Worker `code-wars-api` with a cron every minute (`apps/worker/wrangler.jsonc`) |
+| Database, Auth, Realtime | Supabase project `ptrdipriebabfpfdxuim` | — |
+
+Cloudflare Pages is now part of Workers, so the website is deployed as a Worker that serves static files, instead of a Pages project.
+
+### Redeploying
+- API: `npx wrangler deploy` in `apps/worker`. Secrets (`SUPABASE_SERVICE_ROLE_KEY`, `JUDGE0_API_KEY`) are stored on Cloudflare with `wrangler secret put`.
+- Website: in `apps/web`, put `VITE_API_BASE_URL=<API address>` in `.env.production.local` (git-ignored), then `npx vite build` and `npx wrangler deploy`.
+- Migrations: `node scripts/db-apply.mjs`.
+- Production check: `API_BASE_URL=<API address> node scripts/e2e-battle.mjs --judge0` (about 12 paid judge runs).
 Last updated: 2026-11-14
 
 ## 1. Target topology (₹0/month)

@@ -7,9 +7,14 @@
   "compatibility_date": "2026-10-01",
   // Every minute: resolve expired battles and clear stuck rows.
   "triggers": { "crons": ["* * * * *"] },
+  // Production values. Local development overrides these from .dev.vars
+  // (JUDGE_PROVIDER=mock there, so local testing never spends money).
   "vars": {
-    "JUDGE_PROVIDER": "mock",
+    "SUPABASE_URL": "https://ptrdipriebabfpfdxuim.supabase.co",
+    "JUDGE_PROVIDER": "judge0",
     "JUDGE_DAILY_LIMIT": "50",
-    "ALLOWED_ORIGINS": "http://localhost:5173",
+    "JUDGE0_API_URL": "https://judge0-ce.p.rapidapi.com",
+    "JUDGE0_API_HOST": "judge0-ce.p.rapidapi.com",
+    "ALLOWED_ORIGINS": "https://code-wars.unified-loans-commercial.workers.dev",
   },
 }

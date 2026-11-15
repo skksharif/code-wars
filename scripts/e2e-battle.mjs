@@ -127,6 +127,12 @@ try {
     "Problem is withheld during get-ready",
     ready.status === 200 && ready.body.problem === null,
   );
+  // Checked straight after matching: the get-ready phase lasts only 10 seconds.
+  const tooEarly = await api(alice, "POST", `/api/battles/${battleId}/submit`, {
+    language: "python",
+    code: "print(1)",
+  });
+  check("Submit before start is refused", tooEarly.status === 409, tooEarly.body?.error?.code);
   check(
     "Outsider cannot open the battle",
     (await api(carol, "GET", `/api/battles/${battleId}`)).status === 403,
@@ -215,12 +221,6 @@ try {
   );
 
   // ---- battle starts --------------------------------------------------------
-  const tooEarly = await api(alice, "POST", `/api/battles/${battleId}/submit`, {
-    language: "python",
-    code: "print(1)",
-  });
-  check("Submit before start is refused", tooEarly.status === 409, tooEarly.body?.error?.code);
-
   const startsAt = Date.parse(ready.body.battle.startsAt);
   const offset = Date.parse(ready.body.serverTime) - Date.now();
   await sleep(Math.max(0, startsAt - (Date.now() + offset)) + 1500);

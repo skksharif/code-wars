@@ -11,8 +11,8 @@ Last updated: 2026-11-14
 | 2 | Architecture, schema, API, security, deployment design | Approved 2026-11-14 |
 | 3 | UI/UX (pages, journey, visual direction) | Approved 2026-11-14: neon esports look with versus-style layout (second mockup) |
 | 4 | Implementation, one module at a time | Complete — M0 to M8 approved and committed |
-| 5 | Integration | In progress — real Supabase verified 2026-11-15 (40 end-to-end checks, 9 concurrency and cron checks); real Judge0 verified for all four languages and a full battle; browser run in Chrome passed (log-in, matchmaking, get-ready, Monaco, Run, Submit, live opponent progress, victory, rankings, history). Awaiting approval |
-| 6 | Deployment | Not started |
+| 5 | Integration | Complete — real Supabase verified 2026-11-15 (40 end-to-end checks, 9 concurrency and cron checks); real Judge0 verified for all four languages and a full battle; browser run in Chrome passed (log-in, matchmaking, get-ready, Monaco, Run, Submit, live opponent progress, victory, rankings, history). Awaiting approval |
+| 6 | Deployment | Deployed 2026-11-15 — site https://code-wars.unified-loans-commercial.workers.dev, API https://code-wars-api.unified-loans-commercial.workers.dev; production battle check passed |
 
 ## Modules (each ends with tests, a report and an approval request)
 
