@@ -17,6 +17,8 @@ export interface LiveService {
    * leaves the lobby.
    */
   joinLobby(userId: string, onCount: (count: number) => void): () => void;
+  /** Calls `onChange` when the room row changes (someone joined, left, or it started). */
+  watchRoom(roomId: string, onChange: () => void): () => void;
 }
 
 export interface FinalSubmission {
@@ -50,6 +52,8 @@ export interface HistoryEntry {
   problemTitle: string;
   opponent: string;
   opponentAvatar: string;
+  /** False for a custom match (no rating change). */
+  isRated: boolean;
 }
 
 export interface PublicProfile {
@@ -146,6 +150,20 @@ export function createSupabaseLive(supabase: SupabaseClient): LiveService {
         void supabase.removeChannel(lobby);
       };
     },
+
+    watchRoom(roomId, onChange) {
+      const channel = supabase
+        .channel(`room-changes:${roomId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "custom_rooms", filter: `id=eq.${roomId}` },
+          () => onChange(),
+        )
+        .subscribe();
+      return () => {
+        void supabase.removeChannel(channel);
+      };
+    },
   };
 }
 
@@ -165,7 +183,7 @@ interface HistoryRow {
   rating_after: number;
   language: Language | null;
   best_passed: number;
-  battles: { finished_at: string; problems: { title: string } | null } | null;
+  battles: { finished_at: string; is_rated: boolean; problems: { title: string } | null } | null;
 }
 
 interface OpponentRow {
@@ -246,7 +264,7 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
       const { data, error } = await supabase
         .from("battle_players")
         .select(
-          "battle_id, result, rating_before, rating_after, language, best_passed, battles(finished_at, problems(title))",
+          "battle_id, result, rating_before, rating_after, language, best_passed, battles(finished_at, is_rated, problems(title))",
         )
         .eq("user_id", userId)
         .not("rating_after", "is", null)
@@ -283,6 +301,7 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
           problemTitle: row.battles?.problems?.title ?? "Unknown problem",
           opponent: rivals.get(row.battle_id)?.username ?? "unknown",
           opponentAvatar: rivals.get(row.battle_id)?.avatar ?? "cipher",
+          isRated: row.battles?.is_rated ?? true,
         }))
         .sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
     },

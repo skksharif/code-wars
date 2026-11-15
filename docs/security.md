@@ -41,6 +41,8 @@ Last updated: 2026-11-14
 | Leaking internals | Generic 500 responses; details only in Worker logs |
 | XSS through problem statements or usernames | Markdown rendered with sanitisation; usernames restricted to `[A-Za-z0-9_]` |
 | Eavesdropping on presence | Private Realtime channel restricted to participants |
+| Rating farming with a friend | Custom matches are unrated: the database never changes rating or W/L/D for a battle with `is_rated = false`, and only `start_room` creates such battles |
+| Guessing or snooping on room codes | 31^6 ≈ 887 million codes; only open rooms can be joined and they expire after 30 minutes; a looked-up room reveals only the host's public name, avatar, rating and settings; started rooms are visible to their two players only; the room row is readable only by its host and guest |
 | Abusing the site-wide "players online" channel | Private channel `lobby`: signed-in players only, presence only (no broadcast), so it cannot carry messages; it reveals only a count of user ids, never names |
 
 ## 4. Accepted risks for the MVP (need your awareness)

@@ -1,6 +1,7 @@
 import { LIMITS, matchWindow } from "@code-wars/shared";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { CustomPanel } from "../rooms/CustomPanel";
 import { useAuth } from "../auth/AuthContext";
 import { formatClock } from "../battle/useBattle";
 import { Button } from "../components/ui";
@@ -20,6 +21,7 @@ export function ArenaPage() {
   const { profile } = useAuth();
   const { api, timing } = useServices();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const phone = useMediaQuery(PHONE_QUERY);
   const [search, setSearch] = useState<Search>({ status: "checking" });
   const [now, setNow] = useState(() => Date.now());
@@ -94,6 +96,23 @@ export function ArenaPage() {
     }
   }
 
+  const mode = params.get("mode") === "custom" ? "custom" : "ranked";
+  function setMode(next: "ranked" | "custom") {
+    if (next === mode) return;
+    if (searching) void cancel();
+    setParams(next === "custom" ? { mode: "custom" } : {}, { replace: true });
+  }
+  const tabs = <ModeTabs mode={mode} onChange={setMode} />;
+
+  if (mode === "custom") {
+    return (
+      <main className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-[5%] md:py-10">
+        {tabs}
+        <CustomPanel />
+      </main>
+    );
+  }
+
   const rating = profile?.rating ?? LIMITS.initialRating;
   const elapsedMs = searching ? Math.max(0, now - search.startedAt) : 0;
   const range = searching ? matchWindow(search.waitedMs) : LIMITS.matchWindowStart;
@@ -117,6 +136,7 @@ export function ArenaPage() {
   if (phone) {
     return (
       <PhoneArena
+        tabs={tabs}
         rating={rating}
         searching={searching}
         checking={search.status === "checking"}
@@ -131,7 +151,8 @@ export function ArenaPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col justify-center gap-6 px-4 py-6 md:gap-8 md:px-[5%] md:py-12">
+    <main className="flex flex-1 flex-col gap-6 px-4 py-6 md:gap-8 md:px-[5%] md:py-10">
+      {tabs}
       <div className="flex justify-center">
         <OnlineBadge />
       </div>
@@ -204,6 +225,38 @@ export function ArenaPage() {
   );
 }
 
+/** Ranked (matchmaking by rating) or Custom (a room with a friend). */
+function ModeTabs({
+  mode,
+  onChange,
+}: {
+  mode: "ranked" | "custom";
+  onChange: (mode: "ranked" | "custom") => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Match type"
+      className="mx-auto flex w-full max-w-xl border-b border-line"
+    >
+      {(["ranked", "custom"] as const).map((key) => (
+        <button
+          key={key}
+          type="button"
+          role="tab"
+          aria-selected={mode === key}
+          onClick={() => onChange(key)}
+          className={`h-12 flex-1 cursor-pointer border-0 border-b-2 bg-transparent font-display text-base font-bold tracking-[0.14em] uppercase ${
+            mode === key ? "border-you text-you" : "border-transparent text-muted hover:text-ink"
+          }`}
+        >
+          {key === "ranked" ? "Ranked" : "Custom"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const HEXAGON = "polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)";
 
 function BracketsIcon() {
@@ -222,6 +275,7 @@ function BracketsIcon() {
  * hexagon turns pink and shows the time spent looking, with Cancel below.
  */
 function PhoneArena({
+  tabs,
   rating,
   searching,
   checking,
@@ -231,6 +285,7 @@ function PhoneArena({
   onCancel,
   children,
 }: {
+  tabs: ReactNode;
   rating: number;
   searching: boolean;
   checking: boolean;
@@ -249,6 +304,7 @@ function PhoneArena({
 
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 py-4">
+      {tabs}
       <section
         aria-label="Your rating"
         className="flex flex-col gap-2.5 border border-line bg-panel px-4 py-3.5"

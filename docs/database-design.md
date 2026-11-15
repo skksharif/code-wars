@@ -106,6 +106,13 @@ Unique index: `(user_id) WHERE status = 'judging'` — one in-flight submission 
 
 No client policies.
 
+### custom_rooms (custom matches, migration 20261116000008)
+- `id`, `code` (6 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`), `host_id`, `guest_id`, `difficulty` (any/easy/medium/hard), `duration_minutes` (10/15/30), `status` (open/started/closed/expired), `battle_id`, `created_at`, `expires_at` (created + 30 minutes), `started_at`.
+- Partial unique indexes: one open room per code, per host and per guest.
+- RLS: host and guest can read their room (also what Realtime delivers); no client writes.
+- `battles.is_rated` (default true) marks custom battles as unrated: `finish_battle` records results but leaves `profiles.rating`, wins, losses and draws untouched (`rating_after = rating_before`). The `rating_history` view and `get_public_profile` count ranked battles only.
+- Functions (service_role only): `create_room`, `get_current_room`, `get_room`, `get_room_by_code`, `join_room`, `leave_room`, `start_room` (picks the problem, creates the unrated battle, 10 s get-ready), `rematch_room`; `expire_rooms` also runs from `sweep_stale` every minute.
+
 ### Views
 - `leaderboard`: username, rating, wins, losses, draws, rank. Public read.
 - `rating_history`: from finished `battle_players` rows (user, battle, rating_before, rating_after, delta, result, finished_at). Under RLS a user sees rows for battles they took part in.

@@ -1,4 +1,4 @@
-import type { Language, Verdict } from "@code-wars/shared";
+import type { Language, RoomDifficulty, RoomMinutes, Verdict } from "@code-wars/shared";
 
 /** An error returned by the Worker API, or a network failure (code NETWORK). */
 export class ApiError extends Error {
@@ -40,6 +40,10 @@ export interface BattleState {
     finishedAt: string | null;
     winnerId: string | null;
     finishReason: "solved" | "timeout_score" | "timeout_draw" | "forfeit" | null;
+    /** False for a custom match, which never changes ratings. */
+    isRated: boolean;
+    /** The room code a custom match was played from. */
+    roomCode: string | null;
   };
   players: BattlePlayer[];
   totalTests: number;
@@ -70,7 +74,37 @@ export interface SubmitResult {
   battleFinished: boolean;
 }
 
+export interface RoomPlayer {
+  userId: string;
+  username: string;
+  avatar: string;
+  rating: number;
+}
+
+/** A custom match room, as one of its players (or someone about to join) sees it. */
+export interface Room {
+  serverTime: string;
+  id: string;
+  code: string;
+  status: "open" | "started" | "closed" | "expired";
+  difficulty: RoomDifficulty;
+  minutes: RoomMinutes;
+  expiresAt: string;
+  battleId: string | null;
+  isHost: boolean;
+  host: RoomPlayer;
+  guest: RoomPlayer | null;
+}
+
 export interface ApiClient {
+  createRoom(difficulty: RoomDifficulty, minutes: RoomMinutes): Promise<Room>;
+  getCurrentRoom(): Promise<Room | null>;
+  getRoomByCode(code: string): Promise<Room>;
+  joinRoom(code: string): Promise<Room>;
+  getRoom(roomId: string): Promise<Room>;
+  leaveRoom(roomId: string): Promise<void>;
+  startRoom(roomId: string): Promise<Room>;
+  rematch(battleId: string): Promise<Room>;
   joinMatchmaking(): Promise<MatchmakingStatus>;
   cancelMatchmaking(): Promise<void>;
   getActiveBattle(): Promise<string | null>;
@@ -134,6 +168,17 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   }
 
   return {
+    createRoom: (difficulty, minutes) => request("POST", "/api/rooms", { difficulty, minutes }),
+    getCurrentRoom: async () =>
+      (await request<{ room: Room | null }>("GET", "/api/rooms/current")).room,
+    getRoomByCode: (code) => request("GET", `/api/rooms/code/${encodeURIComponent(code)}`),
+    joinRoom: (code) => request("POST", "/api/rooms/join", { code }),
+    getRoom: (id) => request("GET", `/api/rooms/${id}`),
+    leaveRoom: async (id) => {
+      await request("POST", `/api/rooms/${id}/leave`);
+    },
+    startRoom: (id) => request("POST", `/api/rooms/${id}/start`),
+    rematch: (id) => request("POST", `/api/battles/${id}/rematch`),
     joinMatchmaking: () => request("POST", "/api/matchmaking/join"),
     cancelMatchmaking: async () => {
       await request("POST", "/api/matchmaking/cancel");

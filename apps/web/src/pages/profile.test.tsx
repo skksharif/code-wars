@@ -148,6 +148,7 @@ describe("profile page", () => {
       problemTitle: "Count the Peaks",
       opponent: "byte_rival",
       opponentAvatar: "pixel",
+      isRated: true,
       ...overrides,
     });
     const renderMine = () => {
@@ -398,6 +399,7 @@ describe("profile page on phones", () => {
         problemTitle: "Count the Peaks",
         opponent: "byte_rival",
         opponentAvatar: "pixel",
+        isRated: true,
       },
     ];
     renderWithApp(createFakeAuth(TEST_USER), services, "/u/coder_42");

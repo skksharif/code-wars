@@ -13,6 +13,8 @@ const ArenaPage = lazy(() => import("./pages/ArenaPage").then((m) => ({ default:
 const BattlePage = lazy(() =>
   import("./pages/BattlePage").then((m) => ({ default: m.BattlePage })),
 );
+const JoinPage = lazy(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
+const RoomPage = lazy(() => import("./pages/RoomPage").then((m) => ({ default: m.RoomPage })));
 const ProfilePage = lazy(() =>
   import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
@@ -67,6 +69,22 @@ export function App() {
               element={
                 <RequireAuth>
                   <BattlePage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/join/:code"
+              element={
+                <RequireAuth>
+                  <JoinPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/room/:id"
+              element={
+                <RequireAuth>
+                  <RoomPage />
                 </RequireAuth>
               }
             />

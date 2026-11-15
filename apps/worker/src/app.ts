@@ -9,6 +9,7 @@ import { createJudge, type JudgeFactory } from "./judge/index";
 import { registerBattleRoutes } from "./routes/battles";
 import { registerMatchmakingRoutes } from "./routes/matchmaking";
 import { registerProfileRoutes } from "./routes/profile";
+import { registerRoomRoutes } from "./routes/rooms";
 import { registerSubmissionRoutes } from "./routes/submissions";
 
 export interface AppContext {
@@ -73,6 +74,7 @@ export function createApp(overrides: Partial<AppDeps> = {}): Hono<AppContext> {
   registerSubmissionRoutes(app, deps.createJudge);
   registerBattleRoutes(app);
   registerProfileRoutes(app);
+  registerRoomRoutes(app);
 
   app.notFound((c) => c.json(new ApiError("NOT_FOUND").toBody(), 404));
 

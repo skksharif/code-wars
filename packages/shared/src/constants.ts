@@ -60,6 +60,26 @@ export function matchWindow(waitedMs: number): number {
   return LIMITS.matchWindowStart + steps * LIMITS.matchWindowStep;
 }
 
+/** Custom match rooms. Values match the database check constraints. */
+export const ROOM_DIFFICULTIES = ["any", "easy", "medium", "hard"] as const;
+export type RoomDifficulty = (typeof ROOM_DIFFICULTIES)[number];
+export const ROOM_MINUTES = [10, 15, 30] as const;
+export type RoomMinutes = (typeof ROOM_MINUTES)[number];
+/** Letters and digits with no look-alikes: no 0/O, 1/I/L. */
+export const ROOM_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+export const ROOM_CODE_LENGTH = 6;
+export const ROOM_CODE_PATTERN = /^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{6}$/;
+
+/** Upper-cases a typed code and drops anything that cannot be part of one. */
+export function cleanRoomCode(typed: string): string {
+  return typed
+    .toUpperCase()
+    .split("")
+    .filter((ch) => ROOM_CODE_ALPHABET.includes(ch))
+    .join("")
+    .slice(0, ROOM_CODE_LENGTH);
+}
+
 /** The six built-in avatars. Ids match the database check constraint. */
 export const AVATARS = ["cipher", "kernel", "vector", "nova", "pixel", "echo"] as const;
 export type AvatarId = (typeof AVATARS)[number];

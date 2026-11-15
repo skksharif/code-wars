@@ -19,6 +19,16 @@ Base path `/api`. Every route except `/api/health` requires `Authorization: Bear
 | POST | `/profile/avatar` | `{ avatar }` (cipher, kernel, vector, nova, pixel or echo) | `{ avatar }` | Changes only the signed-in player's avatar |
 | POST | `/battles/:id/forfeit` | — | `{ ok: true }` | |
 | POST | `/battles/:id/finalize` | — | `{ finished: boolean }` | Idempotent; no effect before `ends_at` |
+| POST | `/rooms` | `{ difficulty: any\|easy\|medium\|hard, minutes: 10\|15\|30 }` | Room | Custom match. Closes the player's other open room |
+| GET | `/rooms/current` | — | `{ room \| null }` | The open room the player hosts or has joined |
+| GET | `/rooms/code/:code` | — | Room | Look up before joining. `ROOM_NOT_FOUND`, `ROOM_EXPIRED` (410), `ROOM_FULL` |
+| POST | `/rooms/join` | `{ code }` | Room | `ROOM_OWN`, `ROOM_FULL`, `ROOM_EXPIRED`, `ALREADY_IN_BATTLE` |
+| GET | `/rooms/:id` | — | Room | Host and guest only |
+| POST | `/rooms/:id/leave` | — | `{ ok: true }` | Host closes the room; guest leaves it |
+| POST | `/rooms/:id/start` | — | Room with `battleId` | Host only (`NOT_HOST`), needs a guest (`ROOM_NOT_READY`); creates an unrated battle |
+| POST | `/battles/:id/rematch` | — | Room | Finished custom battles only; same settings, friend put in if free |
+
+Room: `{ id, code, status: open|started|closed|expired, difficulty, minutes, expiresAt, battleId, isHost, host, guest, serverTime }`, where host and guest are `{ userId, username, avatar, rating }`. `GET /battles/:id` also returns `battle.isRated` and `battle.roomCode`.
 
 Scheduled (Cron Trigger, every minute): `finalize_expired_battles()` and `sweep_stale()`.
 

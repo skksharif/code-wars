@@ -42,6 +42,7 @@ const battle = (overrides: Partial<HistoryEntry>): HistoryEntry => ({
   problemTitle: "Count the Peaks",
   opponent: "byte_rival",
   opponentAvatar: "pixel",
+  isRated: true,
   ...overrides,
 });
 

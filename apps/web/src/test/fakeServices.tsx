@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { App } from "../App";
 import { AuthProvider } from "../auth/AuthContext";
-import type { ApiClient, BattlePlayer, BattleState } from "../lib/api";
+import type { ApiClient, BattlePlayer, BattleState, Room } from "../lib/api";
 import type {
   BattleWatchHandlers,
   FinalSubmission,
@@ -48,6 +48,8 @@ export function battleState(overrides: Partial<BattleState> = {}): BattleState {
       finishedAt: null,
       winnerId: null,
       finishReason: null,
+      isRated: true,
+      roomCode: null,
     },
     players: [player(), player(RIVAL)],
     totalTests: 5,
@@ -76,12 +78,41 @@ export function finishedState(
   };
 }
 
+export const ROOM_ID = "22222222-2222-4222-8222-222222222222";
+
+/** An open custom room hosted by the test user (coder_42), unless overridden. */
+export function room(overrides: Partial<Room> = {}): Room {
+  return {
+    serverTime: iso(0),
+    id: ROOM_ID,
+    code: "K7M2QX",
+    status: "open",
+    difficulty: "any",
+    minutes: 15,
+    expiresAt: iso(29 * 60_000),
+    battleId: null,
+    isHost: true,
+    host: { userId: "user-1", username: "coder_42", avatar: "nova", rating: 1216 },
+    guest: null,
+    ...overrides,
+  };
+}
+
+export const ROOM_GUEST = {
+  userId: "user-2",
+  username: "byte_rival",
+  avatar: "pixel",
+  rating: 1180,
+} as const;
+
 export interface FakeServices extends Services {
   api: { [K in keyof ApiClient]: ReturnType<typeof vi.fn<ApiClient[K]>> };
   /** Handlers registered by the battle page, to simulate live events. */
   watchers: BattleWatchHandlers[];
   /** Who is in the site-wide lobby, and how to tell them the online count. */
   lobby: { userId: string; onCount: (count: number) => void }[];
+  /** Room pages watching for changes, to simulate live room updates. */
+  roomWatchers: (() => void)[];
   solutions: FinalSubmission[];
   leaderboard: LeaderboardEntry[] | Error;
   history: HistoryEntry[] | Error;
@@ -91,14 +122,36 @@ export interface FakeServices extends Services {
 export function createFakeServices(): FakeServices {
   const watchers: BattleWatchHandlers[] = [];
   const lobby: FakeServices["lobby"] = [];
+  const roomWatchers: (() => void)[] = [];
   const services: FakeServices = {
     watchers,
     lobby,
+    roomWatchers,
     solutions: [],
     leaderboard: [],
     history: [],
     profiles: {},
     api: {
+      createRoom: vi.fn<ApiClient["createRoom"]>(async (difficulty, minutes) =>
+        room({ difficulty, minutes }),
+      ),
+      getCurrentRoom: vi.fn<ApiClient["getCurrentRoom"]>(async () => null),
+      getRoomByCode: vi.fn<ApiClient["getRoomByCode"]>(async (code) =>
+        room({
+          code,
+          isHost: false,
+          host: { ...ROOM_GUEST, username: "host_friend", userId: "user-3" },
+        }),
+      ),
+      joinRoom: vi.fn<ApiClient["joinRoom"]>(async () =>
+        room({ isHost: false, guest: { ...ROOM_GUEST } }),
+      ),
+      getRoom: vi.fn<ApiClient["getRoom"]>(async () => room()),
+      leaveRoom: vi.fn<ApiClient["leaveRoom"]>(async () => undefined),
+      startRoom: vi.fn<ApiClient["startRoom"]>(async () =>
+        room({ status: "started", battleId: BATTLE_ID, guest: { ...ROOM_GUEST } }),
+      ),
+      rematch: vi.fn<ApiClient["rematch"]>(async () => room({ guest: { ...ROOM_GUEST } })),
       joinMatchmaking: vi.fn<ApiClient["joinMatchmaking"]>(async () => ({
         status: "queued",
         waitedMs: 0,
@@ -128,6 +181,12 @@ export function createFakeServices(): FakeServices {
         watchers.push(handlers);
         return () => {
           watchers.splice(watchers.indexOf(handlers), 1);
+        };
+      },
+      watchRoom: (_roomId, onChange) => {
+        roomWatchers.push(onChange);
+        return () => {
+          roomWatchers.splice(roomWatchers.indexOf(onChange), 1);
         };
       },
       joinLobby: (userId, onCount) => {

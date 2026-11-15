@@ -20,6 +20,7 @@ export async function createDb(): Promise<PGlite> {
 export async function resetState(db: PGlite): Promise<void> {
   await db.exec(`
     reset role;
+    delete from public.custom_rooms;
     delete from public.submissions;
     delete from public.battle_players;
     delete from public.battles;

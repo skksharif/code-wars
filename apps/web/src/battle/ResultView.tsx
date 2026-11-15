@@ -1,7 +1,7 @@
 import { LANGUAGE_LABELS } from "@code-wars/shared";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import type { BattlePlayer, BattleState } from "../lib/api";
+import { Link, useNavigate } from "react-router-dom";
+import { ApiError, type BattlePlayer, type BattleState, type Room } from "../lib/api";
 import type { FinalSubmission } from "../lib/live";
 import { useServices } from "../services";
 import { Avatar } from "../components/Avatar";
@@ -30,10 +30,13 @@ function PlayerCard({
   player,
   total,
   side,
+  rated,
 }: {
   player: BattlePlayer;
   total: number;
   side: "you" | "rival";
+  /** Custom matches show no rating change. */
+  rated: boolean;
 }) {
   const accent = side === "you" ? "text-you" : "text-rival";
   const edge = side === "you" ? "border-b-you" : "border-b-rival";
@@ -60,7 +63,7 @@ function PlayerCard({
         />
         <span className="min-w-0 break-all">{player.username}</span>
       </Link>
-      {player.ratingAfter !== null && delta !== null ? (
+      {rated && player.ratingAfter !== null && delta !== null ? (
         <p
           className="m-0 flex items-baseline gap-3 font-display font-bold"
           aria-label={`Rating ${player.ratingBefore} to ${player.ratingAfter}, change ${delta >= 0 ? "plus" : "minus"} ${Math.abs(delta)}`}
@@ -89,12 +92,96 @@ function PlayerCard({
   );
 }
 
+/**
+ * After a custom match: Rematch makes a new room with the same friend and
+ * settings. If the friend presses it first, this player is put in their room,
+ * so a quiet check shows an invitation to go there.
+ */
+function Rematch({ battleId, rival }: { battleId: string; rival: string }) {
+  const { api, timing } = useServices();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [invite, setInvite] = useState<Room | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const check = () =>
+      api.getCurrentRoom().then(
+        (room) => active && setInvite(room && !room.isHost ? room : null),
+        () => undefined,
+      );
+    void check();
+    const poll = setInterval(() => void check(), Math.min(timing.pollMs, 4000));
+    return () => {
+      active = false;
+      clearInterval(poll);
+    };
+  }, [api, timing.pollMs]);
+
+  async function rematch() {
+    setBusy(true);
+    setError(null);
+    try {
+      const room = await api.rematch(battleId);
+      navigate(`/room/${room.id}`);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Could not start a rematch.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      {invite ? (
+        <p
+          role="status"
+          className="m-0 flex w-full max-w-xl flex-wrap items-center justify-between gap-3 border border-rival bg-rival/5 px-4 py-3"
+        >
+          <span>
+            <b>{invite.host.username}</b> wants a rematch.
+          </span>
+          <Link
+            to={`/room/${invite.id}`}
+            className="inline-flex h-11 items-center border border-rival px-4 font-display font-semibold tracking-widest text-rival uppercase no-underline hover:bg-rival/10"
+          >
+            Join room
+          </Link>
+        </p>
+      ) : null}
+      <div className="flex w-full max-w-xl flex-col gap-3 md:flex-row">
+        <button
+          type="button"
+          onClick={() => void rematch()}
+          disabled={busy}
+          aria-label={`Rematch ${rival}`}
+          className="cut glow-you inline-flex h-14 flex-1 cursor-pointer items-center justify-center border-0 bg-you px-8 font-display text-xl font-bold tracking-widest text-ground uppercase disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? "Opening room…" : "Rematch"}
+        </button>
+        <Link
+          to="/arena?mode=custom"
+          className="inline-flex h-14 flex-1 items-center justify-center border border-line-strong font-display text-lg font-semibold tracking-widest text-ink uppercase no-underline hover:border-muted"
+        >
+          Back to arena
+        </Link>
+      </div>
+      {error ? (
+        <p role="alert" className="m-0 text-rival">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ResultView({ state }: { state: BattleState }) {
   const { data } = useServices();
   const you = state.players.find((p) => p.isYou)!;
   const rival = state.players.find((p) => !p.isYou)!;
   const [solutions, setSolutions] = useState<FinalSubmission[] | "loading" | "error">("loading");
   const [tab, setTab] = useState<"you" | "rival">("you");
+  const rated = state.battle.isRated !== false;
 
   useEffect(() => {
     let active = true;
@@ -123,29 +210,44 @@ export function ResultView({ state }: { state: BattleState }) {
   return (
     <main className="flex flex-1 flex-col">
       <section className="border-b border-line px-4 pt-7 pb-6 text-center md:px-[5%] md:pt-10 md:pb-7">
-        <p className="m-0 font-mono text-xs tracking-[0.2em] text-muted uppercase">Battle over</p>
+        <p className="m-0 font-mono text-xs tracking-[0.2em] text-muted uppercase">
+          {rated
+            ? "Battle over"
+            : `Custom match${state.battle.roomCode ? ` · ${state.battle.roomCode}` : ""}`}
+        </p>
         <h1
           className={`mt-2 mb-0 font-display text-6xl leading-none font-bold tracking-wider uppercase italic sm:text-7xl md:text-9xl ${headlineStyle}`}
         >
           {headline}
         </h1>
         <p className="mt-2 mb-0 text-lg text-soft">{reasonText(state, you, rival)}</p>
+        {rated ? null : (
+          <p className="mt-3 mb-0">
+            <span className="inline-block border border-[#5CF2C2] px-2 py-0.5 font-mono text-[11px] tracking-[0.12em] text-[#5CF2C2]">
+              RATING UNCHANGED
+            </span>
+          </p>
+        )}
       </section>
 
       <section className="flex flex-wrap items-stretch">
-        <PlayerCard player={you} total={state.totalTests} side="you" />
-        <PlayerCard player={rival} total={state.totalTests} side="rival" />
+        <PlayerCard player={you} total={state.totalTests} side="you" rated={rated} />
+        <PlayerCard player={rival} total={state.totalTests} side="rival" rated={rated} />
       </section>
 
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 md:w-[90%] md:px-0 md:py-8">
-        <div className="flex flex-wrap justify-center gap-4">
-          <Link
-            to="/arena"
-            className="cut glow-you inline-flex h-14 items-center bg-you px-11 font-display text-xl font-bold tracking-widest text-ground uppercase no-underline"
-          >
-            Battle again
-          </Link>
-        </div>
+        {rated ? (
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link
+              to="/arena"
+              className="cut glow-you inline-flex h-14 items-center bg-you px-11 font-display text-xl font-bold tracking-widest text-ground uppercase no-underline"
+            >
+              Battle again
+            </Link>
+          </div>
+        ) : (
+          <Rematch battleId={state.battle.id} rival={rival.username} />
+        )}
 
         <section aria-label="Solutions" className="border border-line bg-panel">
           <div role="tablist" className="flex flex-wrap border-b border-line">

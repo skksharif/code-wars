@@ -248,7 +248,16 @@ function BattleHistory({ userId }: { userId: string }) {
                   </span>
                 </span>
                 <span className="flex flex-none flex-col items-end gap-0.5">
-                  <Delta before={battle.ratingBefore} after={battle.ratingAfter} />
+                  {battle.isRated ? (
+                    <Delta before={battle.ratingBefore} after={battle.ratingAfter} />
+                  ) : (
+                    <span
+                      title="Custom match: rating unchanged"
+                      className="border border-[#5CF2C2] px-1.5 font-mono text-[11px] tracking-[0.12em] text-[#5CF2C2]"
+                    >
+                      CUSTOM
+                    </span>
+                  )}
                   <Link to={`/battle/${battle.battleId}`} className="text-sm text-muted">
                     view battle
                   </Link>

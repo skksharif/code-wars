@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { AppContext } from "../app";
 import type { Db } from "../db";
 import { ApiError } from "../errors";
+import { toRoom, type RoomRow } from "./rooms";
 
 const uuidSchema = z.string().uuid();
 
@@ -22,6 +23,8 @@ interface BattleStateRow {
     finished_at: string | null;
     winner_id: string | null;
     finish_reason: string | null;
+    is_rated: boolean;
+    room_code: string | null;
   };
   players: {
     user_id: string;
@@ -64,6 +67,8 @@ export function registerBattleRoutes(app: Hono<AppContext>): void {
         finishedAt: state.battle.finished_at,
         winnerId: state.battle.winner_id,
         finishReason: state.battle.finish_reason,
+        isRated: state.battle.is_rated,
+        roomCode: state.battle.room_code,
       },
       players: state.players.map((p) => ({
         userId: p.user_id,
@@ -88,6 +93,15 @@ export function registerBattleRoutes(app: Hono<AppContext>): void {
         memoryLimitKb: state.problem.memory_limit_kb,
       },
     });
+  });
+
+  // After a custom match: a new room with the same friend and settings.
+  app.post("/api/battles/:id/rematch", async (c) => {
+    const room = await c.get("db").rpc<RoomRow>("rematch_room", {
+      p_user: c.get("userId"),
+      p_battle: battleId(c),
+    });
+    return c.json(toRoom(room));
   });
 
   app.post("/api/battles/:id/forfeit", async (c) => {
