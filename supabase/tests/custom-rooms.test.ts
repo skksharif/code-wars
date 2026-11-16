@@ -7,6 +7,7 @@ import {
   completeSubmission,
   createDb,
   createUser,
+  endOvertime,
   expectDbError,
   makeBattle,
   one,
@@ -15,11 +16,16 @@ import {
   skipCooldown,
 } from "./helpers.ts";
 
-/** A Submit that passes every hidden test, however many the problem has. */
+/**
+ * A Submit that passes every hidden test (however many the problem has), after
+ * which the other player gives up their overtime: the battle is then over.
+ */
 async function solve(db: PGlite, user: string, battle: string) {
   await skipCooldown(db);
   const begun = await beginSubmission(db, user, battle);
-  return completeSubmission(db, begun.submission_id, "accepted", begun.total);
+  const result = await completeSubmission(db, begun.submission_id, "accepted", begun.total);
+  await endOvertime(db, battle);
+  return result;
 }
 
 interface RoomPlayer {

@@ -299,10 +299,24 @@ try {
     code: good,
   });
   check(
-    "Full solve ends the battle",
+    "Full solve wins the battle for the solver",
     win.body?.verdict === "accepted" && win.body?.battleFinished === true,
     `${win.body?.passed}/${win.body?.total} ${win.body?.error?.code ?? ""}`,
   );
+
+  // ---- overtime -------------------------------------------------------------
+  const during = await api(bob, "GET", `/api/battles/${battleId}`);
+  const winnerSeat = during.body?.players?.find((p) => !p.isYou);
+  check(
+    "Overtime: the other player gets 2 minutes; the winner's gain is already applied",
+    during.body?.battle?.status === "active" &&
+      during.body.battle.overtimeEndsAt !== null &&
+      during.body.battle.winnerId === alice.id &&
+      winnerSeat?.ratingAfter === 1216,
+    `${during.body?.battle?.status} ${during.body?.battle?.overtimeEndsAt}`,
+  );
+  const gaveUp = await api(bob, "POST", `/api/battles/${battleId}/forfeit`);
+  check("Overtime: giving up ends it", gaveUp.status === 200, gaveUp.body?.error?.code);
 
   // ---- result ---------------------------------------------------------------
   const final = await api(bob, "GET", `/api/battles/${battleId}`);

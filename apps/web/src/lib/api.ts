@@ -28,6 +28,8 @@ export interface BattlePlayer {
   ratingBefore: number;
   ratingAfter: number | null;
   result: "win" | "loss" | "draw" | null;
+  /** Lost the race but solved it during overtime (loss halved). */
+  solvedInOvertime: boolean;
 }
 
 export interface BattleState {
@@ -44,6 +46,13 @@ export interface BattleState {
     isRated: boolean;
     /** The room code a custom match was played from. */
     roomCode: string | null;
+    /** When the winner solved it. Set once someone has passed every test. */
+    firstSolvedAt: string | null;
+    /** End of the other player's overtime (2 min, never past endsAt). */
+    overtimeEndsAt: string | null;
+    overtimeOutcome: "solved" | "gave_up" | "timeout" | null;
+    /** The overtime player's rating change if they do not solve it (negative; 0 when unrated). */
+    overtimeFullDelta: number | null;
   };
   players: BattlePlayer[];
   totalTests: number;

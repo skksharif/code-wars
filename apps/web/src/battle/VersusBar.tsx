@@ -47,6 +47,7 @@ export function VersusBar({
   phase,
   remainingMs,
   rivalOnline,
+  overtime = false,
 }: {
   you: BattlePlayer;
   rival: BattlePlayer;
@@ -54,9 +55,17 @@ export function VersusBar({
   phase: BattlePhase;
   remainingMs: number;
   rivalOnline: boolean | null;
+  /** The rival has solved it; this is your overtime. */
+  overtime?: boolean;
 }) {
   const clockLabel =
-    phase === "ready" ? "Starts in" : phase === "active" ? "Time left" : "Time is up";
+    phase === "ready"
+      ? "Starts in"
+      : phase === "active"
+        ? overtime
+          ? "Overtime"
+          : "Time left"
+        : "Time is up";
   // On phones the three parts share one row (you · clock · rival) and the
   // details move under each name; the bar stays pinned while the page scrolls.
   return (
@@ -87,7 +96,9 @@ export function VersusBar({
         <span className="text-[10px] tracking-[0.16em] text-muted uppercase md:text-[11px] md:tracking-[0.2em]">
           {clockLabel}
         </span>
-        <span className="font-display text-3xl leading-none font-bold md:text-5xl">
+        <span
+          className={`font-display text-3xl leading-none font-bold md:text-5xl ${overtime ? "text-glow-rival text-rival" : ""}`}
+        >
           {formatClock(remainingMs)}
         </span>
       </div>

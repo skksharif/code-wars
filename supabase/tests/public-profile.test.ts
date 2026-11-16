@@ -4,6 +4,7 @@ import {
   asClient,
   createDb,
   createUser,
+  endOvertime,
   expireBattle,
   makeBattle,
   one,
@@ -54,6 +55,8 @@ async function playBattle(winner: string | null) {
   const battle = await makeBattle(db, a, b);
   if (winner) {
     await submit(db, winner, battle, "accepted", (await totalTests(battle)) as number);
+    // The other player gives up in overtime: the normal loss.
+    await endOvertime(db, battle);
   } else {
     await expireBattle(db, battle);
     await db.query("select public.finalize_battle_if_expired($1)", [battle]);

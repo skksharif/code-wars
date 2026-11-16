@@ -144,18 +144,34 @@ describe("Submit (hidden tests)", () => {
     ]);
   });
 
-  it("a full solve wins the battle and updates ratings", async () => {
+  it("a full solve wins at once; the other player's overtime solve halves their loss", async () => {
+    const ratings = async () =>
+      (
+        await pg.query<{ username: string; rating: number }>(
+          "select username, rating from public.profiles order by username",
+        )
+      ).rows;
+
     const res = await post(alice, "submit", code("print('solved')"));
     expect(res.body).toMatchObject({ verdict: "accepted", battleFinished: true });
-    expect(await battleStatus()).toEqual({ status: "finished", winner_id: alice });
-    const ratings = await pg.query<{ username: string; rating: number }>(
-      "select username, rating from public.profiles order by username",
-    );
-    expect(ratings.rows).toEqual([
+    // Alice's win and full gain apply at once; Bob is now in overtime.
+    expect(await battleStatus()).toEqual({ status: "active", winner_id: alice });
+    expect(await ratings()).toEqual([
       { username: "alice", rating: 1216 },
-      { username: "bob", rating: 1184 },
+      { username: "bob", rating: 1200 },
     ]);
-    // The loser cannot keep submitting.
+    // The winner's battle is over.
+    const again = await post(alice, "submit", code("print(1)"));
+    expect(again.body.error!.code).toBe("BATTLE_NOT_ACTIVE");
+
+    const overtime = await post(bob, "submit", code("print('solved')"));
+    expect(overtime.body).toMatchObject({ verdict: "accepted", battleFinished: true });
+    expect(await battleStatus()).toEqual({ status: "finished", winner_id: alice });
+    // Bob would have lost 16; solving in overtime halves it.
+    expect(await ratings()).toEqual([
+      { username: "alice", rating: 1216 },
+      { username: "bob", rating: 1192 },
+    ]);
     const late = await post(bob, "submit", code("print(1)"));
     expect(late.status).toBe(409);
     expect(late.body.error!.code).toBe("BATTLE_NOT_ACTIVE");

@@ -31,9 +31,9 @@ beforeEach(async () => {
 });
 
 const player = (user: string) =>
-  one<{ attempts: number; best_passed: number; language: string | null }>(
+  one<{ attempts: number; best_passed: number; language: string | null; result: string | null }>(
     db,
-    "select attempts, best_passed, language from public.battle_players where battle_id = $1 and user_id = $2",
+    "select attempts, best_passed, language, result from public.battle_players where battle_id = $1 and user_id = $2",
     [battle, user],
   );
 const usage = async () =>
@@ -157,8 +157,8 @@ describe("complete_submission", () => {
   it("updates attempts, language and best score", async () => {
     await submit(db, a, battle, "wrong_answer", 3);
     await submit(db, a, battle, "runtime_error", 1);
-    expect(await player(a)).toEqual({ attempts: 2, best_passed: 3, language: "python" });
-    expect(await player(b)).toEqual({ attempts: 0, best_passed: 0, language: null });
+    expect(await player(a)).toMatchObject({ attempts: 2, best_passed: 3, language: "python" });
+    expect(await player(b)).toMatchObject({ attempts: 0, best_passed: 0, language: null });
   });
 
   it("does not count Run attempts", async () => {
@@ -169,16 +169,18 @@ describe("complete_submission", () => {
     expect(status.status).toBe("active");
   });
 
-  it("ends the battle immediately on a full solve", async () => {
+  it("a full solve wins at once and gives the other player overtime", async () => {
     const begun = await beginSubmission(db, a, battle);
     const result = await completeSubmission(db, begun.submission_id, "accepted", begun.total);
+    // Over for the solver; the battle itself stays open for the overtime.
     expect(result.battle_finished).toBe(true);
-    const row = await one<{ status: string; winner_id: string; finish_reason: string }>(
+    const row = await one<{ status: string; winner_id: string; overtime: boolean }>(
       db,
-      "select status, winner_id, finish_reason from public.battles where id = $1",
+      "select status, winner_id, overtime_ends_at is not null as overtime from public.battles where id = $1",
       [battle],
     );
-    expect(row).toEqual({ status: "finished", winner_id: a, finish_reason: "solved" });
+    expect(row).toEqual({ status: "active", winner_id: a, overtime: true });
+    expect((await player(a)).result).toBe("win");
   });
 
   it("cannot be applied twice", async () => {
@@ -218,10 +220,15 @@ describe("complete_submission", () => {
     const first = await beginSubmission(db, a, battle);
     const second = await beginSubmission(db, b, battle);
     await completeSubmission(db, second.submission_id, "accepted", second.total);
+    // The slower full solve lands in overtime: it ends the battle but does not win.
     const late = await completeSubmission(db, first.submission_id, "accepted", first.total);
-    expect(late.battle_finished).toBe(false);
-    const row = await one<{ winner_id: string }>(db, "select winner_id from public.battles");
-    expect(row.winner_id).toBe(b);
+    expect(late.battle_finished).toBe(true);
+    const row = await one<{ winner_id: string; overtime_outcome: string }>(
+      db,
+      "select winner_id, overtime_outcome from public.battles",
+    );
+    expect(row).toEqual({ winner_id: b, overtime_outcome: "solved" });
+    expect((await player(a)).result).toBe("loss");
   });
 
   it("lets a player submit again after the cooldown", async () => {

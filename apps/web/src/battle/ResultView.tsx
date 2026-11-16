@@ -5,14 +5,40 @@ import { ApiError, type BattlePlayer, type BattleState, type Room } from "../lib
 import type { FinalSubmission } from "../lib/live";
 import { useServices } from "../services";
 import { Avatar } from "../components/Avatar";
+import { formatClock } from "./useBattle";
+
+/** What happened in the overtime after the first solve, if there was one. */
+function overtimeText(state: BattleState, you: BattlePlayer, rival: BattlePlayer): string {
+  const youWon = you.result === "win";
+  switch (state.battle.overtimeOutcome) {
+    case "solved":
+      if (youWon) return `${rival.username} also solved it in overtime.`;
+      return state.battle.isRated
+        ? "You solved it in overtime: your rating loss was halved."
+        : "You also solved it in overtime.";
+    case "gave_up":
+      return youWon ? `${rival.username} gave up in overtime.` : "You gave up in overtime.";
+    case "timeout":
+      return youWon ? `${rival.username} ran out of overtime.` : "Overtime ran out.";
+    default:
+      return "";
+  }
+}
 
 function reasonText(state: BattleState, you: BattlePlayer, rival: BattlePlayer): string {
   const youWon = you.result === "win";
+  // The winner's view while the other player is still in overtime.
+  if (state.battle.status === "active" && youWon) return "You passed every hidden test first.";
   switch (state.battle.finishReason) {
     case "solved":
-      return youWon
-        ? "You passed every hidden test first."
-        : `${rival.username} passed every hidden test first.`;
+      return [
+        youWon
+          ? "You passed every hidden test first."
+          : `${rival.username} passed every hidden test first.`,
+        overtimeText(state, you, rival),
+      ]
+        .filter(Boolean)
+        .join(" ");
     case "timeout_score":
       return youWon
         ? "Time ran out. You passed more hidden tests."
@@ -41,7 +67,15 @@ function PlayerCard({
   const accent = side === "you" ? "text-you" : "text-rival";
   const edge = side === "you" ? "border-b-you" : "border-b-rival";
   const outcome =
-    player.result === "win" ? "Winner" : player.result === "loss" ? "Defeated" : "Draw";
+    player.result === "win"
+      ? "Winner"
+      : player.result === "loss"
+        ? player.solvedInOvertime
+          ? "Defeated · solved in overtime"
+          : "Defeated"
+        : player.result === "draw"
+          ? "Draw"
+          : "In overtime";
   const delta = player.ratingAfter === null ? null : player.ratingAfter - player.ratingBefore;
   return (
     <div
@@ -175,7 +209,14 @@ function Rematch({ battleId, rival }: { battleId: string; rival: string }) {
   );
 }
 
-export function ResultView({ state }: { state: BattleState }) {
+export function ResultView({
+  state,
+  overtimeLeftMs = 0,
+}: {
+  state: BattleState;
+  /** While the opponent is in overtime: how long they have left. */
+  overtimeLeftMs?: number;
+}) {
   const { data } = useServices();
   const you = state.players.find((p) => p.isYou)!;
   const rival = state.players.find((p) => !p.isYou)!;
@@ -192,7 +233,10 @@ export function ResultView({ state }: { state: BattleState }) {
     return () => {
       active = false;
     };
-  }, [data, state.battle.id]);
+    // Refetch when an overtime ends: the opponent's code becomes readable then.
+  }, [data, state.battle.id, state.battle.status]);
+
+  const inOvertime = state.battle.status === "active";
 
   const headline = you.result === "win" ? "Victory" : you.result === "loss" ? "Defeat" : "Draw";
   const headlineStyle =
@@ -221,6 +265,19 @@ export function ResultView({ state }: { state: BattleState }) {
           {headline}
         </h1>
         <p className="mt-2 mb-0 text-lg text-soft">{reasonText(state, you, rival)}</p>
+        {inOvertime ? (
+          <p
+            role="status"
+            className="mx-auto mt-4 mb-0 inline-flex max-w-xl flex-wrap items-center justify-center gap-x-2 border border-rival bg-rival/10 px-4 py-2 text-soft"
+          >
+            <b className="font-display tracking-widest text-rival uppercase">Overtime</b>
+            <span>
+              {rival.username} has {formatClock(overtimeLeftMs)} left.{" "}
+              {rated ? "If they solve it, their loss is halved." : "They can still solve it."} Your
+              win is safe.
+            </span>
+          </p>
+        ) : null}
         {rated ? null : (
           <p className="mt-3 mb-0">
             <span className="inline-block border border-[#5CF2C2] px-2 py-0.5 font-mono text-[11px] tracking-[0.12em] text-[#5CF2C2]">
@@ -245,6 +302,8 @@ export function ResultView({ state }: { state: BattleState }) {
               Battle again
             </Link>
           </div>
+        ) : inOvertime ? (
+          <p className="m-0 text-center text-muted">Rematch opens when the overtime ends.</p>
         ) : (
           <Rematch battleId={state.battle.id} rival={rival.username} />
         )}

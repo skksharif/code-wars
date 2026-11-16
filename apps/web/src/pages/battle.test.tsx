@@ -586,3 +586,133 @@ describe("battle room on phones", () => {
     });
   });
 });
+
+describe("overtime", () => {
+  const openBattle = () => open(`/battle/${BATTLE_ID}`);
+  // The rival solved it 7:42 into the battle; you have overtime left.
+  const startsAt = iso(-500_000);
+  const overtimeFor = (
+    you: Partial<Parameters<typeof player>[0]>,
+    rival: Partial<Parameters<typeof player>[0]>,
+    battle: Partial<ReturnType<typeof battleState>["battle"]> = {},
+  ) => {
+    const base = battleState();
+    return {
+      ...base,
+      battle: {
+        ...base.battle,
+        startsAt,
+        endsAt: iso(400_000),
+        winnerId: RIVAL.userId,
+        firstSolvedAt: new Date(Date.parse(startsAt) + 462_000).toISOString(),
+        overtimeEndsAt: iso(100_000),
+        overtimeFullDelta: -16,
+        ...battle,
+      },
+      players: [player({ bestPassed: 3, ...you }), player({ ...RIVAL, ...rival })],
+    };
+  };
+
+  it("offers the player who has not solved it overtime, without blocking the editor", async () => {
+    services.api.getBattle.mockResolvedValue(
+      overtimeFor({}, { result: "win", ratingAfter: 1216, bestPassed: 5 }),
+    );
+    openBattle();
+    const offer = await screen.findByRole("region", { name: /byte_rival solved it in 07:42/ });
+    expect(offer).toHaveTextContent("You've passed 3 of 5 tests.");
+    expect(offer).toHaveTextContent(/Overtime: 01:(3|4)\d left\./);
+    expect(offer).toHaveTextContent("Solve it to halve your rating loss: −8 instead of −16.");
+    expect(screen.getByRole("timer")).toHaveAccessibleName(/^Overtime 01:/);
+    // The editor stays usable while the offer is shown.
+    expect(await screen.findByLabelText("Code editor")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+
+    await userEvent.click(within(offer).getByRole("button", { name: "Keep coding" }));
+    expect(screen.queryByRole("region", { name: /solved it in/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent(/OVERTIME|Overtime/);
+  });
+
+  it("gives up straight from the offer", async () => {
+    services.api.getBattle.mockResolvedValue(overtimeFor({}, { result: "win", ratingAfter: 1216 }));
+    openBattle();
+    const offer = await screen.findByRole("region", { name: /solved it in/ });
+    await userEvent.click(within(offer).getByRole("button", { name: "Give up" }));
+    expect(services.api.forfeit).toHaveBeenCalledWith(BATTLE_ID);
+  });
+
+  it("in a custom match there is no rating at stake", async () => {
+    services.api.getBattle.mockResolvedValue(
+      overtimeFor({}, { result: "win" }, { isRated: false, overtimeFullDelta: 0 }),
+    );
+    openBattle();
+    expect(await screen.findByRole("region", { name: /solved it in/ })).toHaveTextContent(
+      "No rating at stake: finish it for bragging rights.",
+    );
+  });
+
+  it("the winner sees the victory at once, with the opponent's overtime running", async () => {
+    services.api.getBattle.mockResolvedValue({
+      ...overtimeFor({}, {}),
+      players: [
+        player({ result: "win", ratingAfter: 1216, bestPassed: 5 }),
+        player({ ...RIVAL, bestPassed: 2 }),
+      ],
+      battle: { ...overtimeFor({}, {}).battle, winnerId: "user-1" },
+    });
+    openBattle();
+    expect(await screen.findByRole("heading", { name: "Victory" })).toBeInTheDocument();
+    expect(screen.getByText("You passed every hidden test first.")).toBeInTheDocument();
+    const banner = screen.getByText(/has 01:\d\d left/).closest("p")!;
+    expect(banner).toHaveTextContent("If they solve it, their loss is halved.");
+    expect(banner).toHaveTextContent("Your win is safe.");
+    expect(screen.getByText("In overtime")).toBeInTheDocument();
+    expect(screen.getByLabelText("Rating 1200 to 1216, change plus 16")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Battle again" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Code editor")).not.toBeInTheDocument();
+  });
+
+  it("explains a halved loss after an overtime solve", async () => {
+    services.api.getBattle.mockResolvedValue(
+      finishedState(
+        { result: "loss", ratingAfter: 1192, solvedInOvertime: true, bestPassed: 5 },
+        { result: "win", ratingAfter: 1216, bestPassed: 5 },
+        { finishReason: "solved", overtimeOutcome: "solved", winnerId: RIVAL.userId },
+      ),
+    );
+    openBattle();
+    expect(await screen.findByRole("heading", { name: "Defeat" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "byte_rival passed every hidden test first. You solved it in overtime: your rating loss was halved.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Defeated · solved in overtime · you")).toBeInTheDocument();
+    expect(screen.getByLabelText("Rating 1200 to 1192, change minus 8")).toBeInTheDocument();
+  });
+
+  it("tells the winner how the overtime ended", async () => {
+    services.api.getBattle.mockResolvedValue(
+      finishedState(
+        { result: "win", ratingAfter: 1216 },
+        { result: "loss", ratingAfter: 1184 },
+        { finishReason: "solved", overtimeOutcome: "gave_up", winnerId: "user-1" },
+      ),
+    );
+    openBattle();
+    expect(
+      await screen.findByText(
+        "You passed every hidden test first. byte_rival gave up in overtime.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("half of a loss", () => {
+  it("rounds in the player's favour, like the server", async () => {
+    const { halfLoss } = await import("../battle/OvertimeOffer");
+    expect(halfLoss(-16)).toBe(-8);
+    expect(halfLoss(-19)).toBe(-9);
+    expect(halfLoss(-1)).toBe(-0);
+    expect(halfLoss(0)).toBe(0);
+  });
+});

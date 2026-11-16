@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { EditorPanel } from "../battle/EditorPanel";
 import { ProblemPanel } from "../battle/ProblemPanel";
+import { OvertimeOffer } from "../battle/OvertimeOffer";
 import { ResultView } from "../battle/ResultView";
 import { formatClock, useBattle } from "../battle/useBattle";
 import { VersusBar } from "../battle/VersusBar";
@@ -32,6 +33,9 @@ export function BattlePage() {
   // Below the large breakpoint the problem and the editor do not fit side by
   // side, so they become two tabs. Both stay mounted so nothing is lost.
   const [pane, setPane] = useState<"problem" | "code">("problem");
+  // Overtime offer: answered with "Keep coding", or giving up in progress.
+  const [keepCoding, setKeepCoding] = useState(false);
+  const [givingUp, setGivingUp] = useState(false);
 
   const finished = battle.phase === "finished";
   useEffect(() => {
@@ -63,10 +67,24 @@ export function BattlePage() {
   }
 
   const { state } = battle;
-  if (finished) return <ResultView state={state} />;
+  if (finished) return <ResultView state={state} overtimeLeftMs={battle.overtimeLeftMs} />;
 
   const you = state.players.find((p) => p.isYou)!;
   const rival = state.players.find((p) => !p.isYou)!;
+
+  // Giving up in overtime: the player chose it on the offer, so no second question.
+  async function giveUp() {
+    setGivingUp(true);
+    setForfeitError(null);
+    try {
+      await api.forfeit(id);
+      await battle.refresh();
+    } catch (caught) {
+      setForfeitError(caught instanceof ApiError ? caught.message : "Something went wrong.");
+    } finally {
+      setGivingUp(false);
+    }
+  }
 
   async function forfeit() {
     setForfeitError(null);
@@ -89,7 +107,27 @@ export function BattlePage() {
         phase={battle.phase}
         remainingMs={battle.remainingMs}
         rivalOnline={battle.onlineUserIds ? battle.onlineUserIds.includes(rival.userId) : null}
+        overtime={battle.overtime}
       />
+
+      {battle.overtime && battle.phase === "active" ? (
+        <OvertimeOffer
+          rival={rival.username}
+          rivalSolveMs={
+            Date.parse(state.battle.firstSolvedAt ?? state.battle.startsAt) -
+            Date.parse(state.battle.startsAt)
+          }
+          passed={you.bestPassed}
+          total={state.totalTests}
+          fullDelta={state.battle.overtimeFullDelta ?? 0}
+          rated={state.battle.isRated}
+          leftMs={battle.overtimeLeftMs}
+          answered={keepCoding}
+          busy={givingUp}
+          onKeepCoding={() => setKeepCoding(true)}
+          onGiveUp={() => void giveUp()}
+        />
+      ) : null}
 
       <div className="flex min-h-12 flex-wrap items-center justify-end gap-2 border-b border-line bg-panel-deep px-3 py-1.5 md:gap-3 md:px-6">
         {battle.phase !== "ready" && state.problem && !confirmingForfeit ? (
@@ -117,9 +155,11 @@ export function BattlePage() {
         ) : null}
         {confirmingForfeit ? (
           <>
-            <span className="text-sm text-soft">Forfeit and lose rating?</span>
+            <span className="text-sm text-soft">
+              {battle.overtime ? "Give up and take the full loss?" : "Forfeit and lose rating?"}
+            </span>
             <Button variant="ghost" className="h-11 px-4" onClick={() => void forfeit()}>
-              Yes, forfeit
+              {battle.overtime ? "Yes, give up" : "Yes, forfeit"}
             </Button>
             <Button
               variant="outline"
@@ -131,7 +171,7 @@ export function BattlePage() {
           </>
         ) : (
           <Button variant="ghost" className="h-11 px-4" onClick={() => setConfirmingForfeit(true)}>
-            Forfeit
+            {battle.overtime ? "Give up" : "Forfeit"}
           </Button>
         )}
       </div>

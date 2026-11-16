@@ -7,6 +7,7 @@ import {
   completeSubmission,
   createDb,
   createUser,
+  endOvertime,
   expectDbError,
   findMatch,
   makeBattle,
@@ -112,6 +113,10 @@ describe("signed-in users", () => {
     await completeSubmission(db, run.submission_id, "wrong_answer", 0);
     const begun = await beginSubmission(db, a, battle);
     await completeSubmission(db, begun.submission_id, "accepted", begun.total);
+
+    // During b's overtime the winning code stays hidden, so it cannot be copied.
+    await asClient(db, b, async () => expect(await count("submissions")).toBe(0));
+    await endOvertime(db, battle);
 
     await asClient(db, b, async () => {
       const rows = await all<{ kind: string; user_id: string }>(

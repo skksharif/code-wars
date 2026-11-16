@@ -30,6 +30,7 @@ export function player(overrides: Partial<BattlePlayer> = {}): BattlePlayer {
     ratingBefore: 1200,
     ratingAfter: null,
     result: null,
+    solvedInOvertime: false,
     ...overrides,
   };
 }
@@ -50,6 +51,10 @@ export function battleState(overrides: Partial<BattleState> = {}): BattleState {
       finishReason: null,
       isRated: true,
       roomCode: null,
+      firstSolvedAt: null,
+      overtimeEndsAt: null,
+      overtimeOutcome: null,
+      overtimeFullDelta: null,
     },
     players: [player(), player(RIVAL)],
     totalTests: 5,

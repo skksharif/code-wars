@@ -155,6 +155,32 @@ export async function submit(
   return completeSubmission(db, begun.submission_id, verdict, passed);
 }
 
+/**
+ * Ends the overtime that follows a first full solve: the other player gives
+ * up (normal loss), or the overtime runs out.
+ */
+export async function endOvertime(
+  db: PGlite,
+  battle: string,
+  how: "gave_up" | "timeout" = "gave_up",
+): Promise<void> {
+  if (how === "timeout") {
+    await db.query(
+      "update public.battles set overtime_ends_at = now() - interval '1 second' where id = $1",
+      [battle],
+    );
+    await db.query("select public.finalize_battle_if_expired($1)", [battle]);
+    return;
+  }
+  await db.query(
+    `select public.forfeit_battle(bp.user_id, b.id)
+     from public.battles b
+     join public.battle_players bp on bp.battle_id = b.id and bp.user_id <> b.winner_id
+     where b.id = $1`,
+    [battle],
+  );
+}
+
 export async function rating(db: PGlite, user: string): Promise<number> {
   return (
     await one<{ rating: number }>(db, "select rating from public.profiles where id = $1", [user])

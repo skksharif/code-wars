@@ -25,6 +25,10 @@ interface BattleStateRow {
     finish_reason: string | null;
     is_rated: boolean;
     room_code: string | null;
+    first_solved_at: string | null;
+    overtime_ends_at: string | null;
+    overtime_outcome: "solved" | "gave_up" | "timeout" | null;
+    overtime_full_delta: number | null;
   };
   players: {
     user_id: string;
@@ -37,6 +41,7 @@ interface BattleStateRow {
     rating_before: number;
     rating_after: number | null;
     result: string | null;
+    solved_in_overtime: boolean;
   }[];
   total_tests: number;
   problem: {
@@ -69,6 +74,12 @@ export function registerBattleRoutes(app: Hono<AppContext>): void {
         finishReason: state.battle.finish_reason,
         isRated: state.battle.is_rated,
         roomCode: state.battle.room_code,
+        // Overtime: set once someone has solved it and the other player is
+        // (or was) given extra time.
+        firstSolvedAt: state.battle.first_solved_at,
+        overtimeEndsAt: state.battle.overtime_ends_at,
+        overtimeOutcome: state.battle.overtime_outcome,
+        overtimeFullDelta: state.battle.overtime_full_delta,
       },
       players: state.players.map((p) => ({
         userId: p.user_id,
@@ -81,6 +92,7 @@ export function registerBattleRoutes(app: Hono<AppContext>): void {
         ratingBefore: p.rating_before,
         ratingAfter: p.rating_after,
         result: p.result,
+        solvedInOvertime: p.solved_in_overtime,
       })),
       totalTests: state.total_tests,
       // null until the get-ready countdown is over.

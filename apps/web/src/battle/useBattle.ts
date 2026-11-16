@@ -11,6 +11,13 @@ export interface BattleView {
   phase: BattlePhase;
   /** Milliseconds until the battle starts (ready) or ends (active); 0 otherwise. */
   remainingMs: number;
+  /**
+   * Overtime: someone has solved it and the other player has extra time.
+   * True for both players until the overtime is over.
+   */
+  overtime: boolean;
+  /** Milliseconds of overtime left (0 when there is none). */
+  overtimeLeftMs: number;
   /** Ids of connected players, or null if presence is unavailable. */
   onlineUserIds: string[] | null;
   refresh: () => Promise<void>;
@@ -75,7 +82,7 @@ export function useBattle(battleId: string, userId: string): BattleView {
       if (Date.now() - lastAutoActionRef.current < timing.retryMs) return;
 
       const serverNow = Date.now() + offsetRef.current;
-      if (serverNow >= Date.parse(current.battle.endsAt)) {
+      if (serverNow >= Date.parse(deadline(current))) {
         // Time is up on our clock: the server decides whether it really is.
         lastAutoActionRef.current = Date.now();
         void api
@@ -98,10 +105,16 @@ export function useBattle(battleId: string, userId: string): BattleView {
   const serverNow = now + clockOffset;
   let phase: BattlePhase = "loading";
   let remainingMs = 0;
+  const overtimeEndsAt =
+    state?.battle.status === "active" ? (state.battle.overtimeEndsAt ?? null) : null;
+  const overtime = overtimeEndsAt !== null;
+  const overtimeLeftMs = overtimeEndsAt ? Math.max(0, Date.parse(overtimeEndsAt) - serverNow) : 0;
   if (state) {
     const startsAt = Date.parse(state.battle.startsAt);
-    const endsAt = Date.parse(state.battle.endsAt);
-    if (state.battle.status !== "active") {
+    const endsAt = Date.parse(deadline(state));
+    const you = state.players.find((p) => p.isYou);
+    // A player who has already won is done, even while the other is in overtime.
+    if (state.battle.status !== "active" || you?.result) {
       phase = "finished";
     } else if (serverNow < startsAt || !state.problem) {
       phase = "ready";
@@ -114,7 +127,12 @@ export function useBattle(battleId: string, userId: string): BattleView {
     }
   }
 
-  return { state, error, phase, remainingMs, onlineUserIds, refresh };
+  return { state, error, phase, remainingMs, overtime, overtimeLeftMs, onlineUserIds, refresh };
+}
+
+/** When the battle's clock runs out: the end of overtime, if there is one. */
+function deadline(state: BattleState): string {
+  return state.battle.overtimeEndsAt ?? state.battle.endsAt;
 }
 
 export function formatClock(ms: number): string {
