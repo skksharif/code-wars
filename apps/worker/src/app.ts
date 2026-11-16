@@ -8,6 +8,7 @@ import { ApiError, toApiError } from "./errors";
 import { createJudge, type JudgeFactory } from "./judge/index";
 import { registerBattleRoutes } from "./routes/battles";
 import { registerMatchmakingRoutes } from "./routes/matchmaking";
+import { registerFriendRoutes } from "./routes/friends";
 import { registerProfileRoutes } from "./routes/profile";
 import { registerRoomRoutes } from "./routes/rooms";
 import { registerSubmissionRoutes } from "./routes/submissions";
@@ -75,6 +76,7 @@ export function createApp(overrides: Partial<AppDeps> = {}): Hono<AppContext> {
   registerBattleRoutes(app);
   registerProfileRoutes(app);
   registerRoomRoutes(app);
+  registerFriendRoutes(app);
 
   app.notFound((c) => c.json(new ApiError("NOT_FOUND").toBody(), 404));
 

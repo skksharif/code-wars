@@ -43,6 +43,9 @@ Last updated: 2026-11-14
 | Eavesdropping on presence | Private Realtime channel restricted to participants |
 | Rating farming with a friend | Custom matches are unrated: the database never changes rating or W/L/D for a battle with `is_rated = false`, and only `start_room` creates such battles |
 | Guessing or snooping on room codes | 31^6 ≈ 887 million codes; only open rooms can be joined and they expire after 30 minutes; a looked-up room reveals only the host's public name, avatar, rating and settings; started rooms are visible to their two players only; the room row is readable only by its host and guest |
+| Friend-request spam | Requests need the other player's acceptance; at most 20 unanswered outgoing requests; a declined request cannot be resent to the same player for 24 hours; friend lists capped at 100 |
+| Challenge harassment or interrupting a battle | Only accepted friends can challenge; a player in a battle cannot be challenged and receives no pop-ups; challenges expire after 30 seconds and one outgoing challenge at a time |
+| Reading other people's friendships or challenges | Rows readable only by the two players involved (RLS); all changes through service-role functions |
 | Abusing the site-wide "players online" channel | Private channel `lobby`: signed-in players only, presence only (no broadcast), so it cannot carry messages; it reveals only a count of user ids, never names |
 
 ## 4. Accepted risks for the MVP (need your awareness)

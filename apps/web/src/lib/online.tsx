@@ -2,30 +2,36 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useAuth } from "../auth/AuthContext";
 import { useServices } from "../services";
 
-/** Players connected right now, or null until the first count arrives. */
-const OnlineContext = createContext<number | null>(null);
+/** Ids of players connected right now, or null until the first update arrives. */
+const OnlineContext = createContext<ReadonlySet<string> | null>(null);
 
 /**
  * While someone is signed in, keeps them in the site-wide lobby (whatever page
- * they are on, battles included) and shares how many players are online.
+ * they are on, battles included) and shares who is online.
  */
 export function OnlineProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { live } = useServices();
-  const [count, setCount] = useState<number | null>(null);
+  const [members, setMembers] = useState<ReadonlySet<string> | null>(null);
   const userId = user?.id ?? null;
 
   useEffect(() => {
-    setCount(null);
+    setMembers(null);
     if (!userId) return;
-    return live.joinLobby(userId, setCount);
+    return live.joinLobby(userId, (ids) => setMembers(new Set(ids)));
   }, [live, userId]);
 
-  return <OnlineContext.Provider value={count}>{children}</OnlineContext.Provider>;
+  return <OnlineContext.Provider value={members}>{children}</OnlineContext.Provider>;
 }
 
-export function useOnlineCount(): number | null {
+/** Who is online (null until known). */
+export function useOnlineUsers(): ReadonlySet<string> | null {
   return useContext(OnlineContext);
+}
+
+/** How many players are online (null until known). */
+export function useOnlineCount(): number | null {
+  return useOnlineUsers()?.size ?? null;
 }
 
 /** A small "● 3 players online" badge. Hidden until the count is known. */

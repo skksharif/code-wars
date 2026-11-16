@@ -105,7 +105,76 @@ export interface Room {
   guest: RoomPlayer | null;
 }
 
+export interface HeadToHead {
+  wins: number;
+  losses: number;
+  draws: number;
+}
+
+export interface Friend extends RoomPlayer {
+  friendsSince: string;
+  /** In a battle right now: cannot be challenged. */
+  inBattle: boolean;
+  /** Your record against this friend. */
+  headToHead: HeadToHead;
+}
+
+export interface FriendList {
+  friends: Friend[];
+  /** Requests waiting for your answer. */
+  incoming: (RoomPlayer & { sentAt: string })[];
+  /** Requests you sent that are not answered yet. */
+  outgoing: (RoomPlayer & { sentAt: string })[];
+}
+
+export type FriendStatusKind = "none" | "outgoing" | "incoming" | "friends" | "self";
+
+export interface FriendStatus {
+  userId: string;
+  status: FriendStatusKind;
+  inBattle: boolean;
+  headToHead: HeadToHead;
+}
+
+export interface Challenge {
+  serverTime: string;
+  id: string;
+  status: "pending" | "accepted" | "declined" | "expired" | "cancelled";
+  cancelReason: "withdrawn" | "challenger_busy" | "challenged_busy" | "unfriended" | null;
+  difficulty: RoomDifficulty;
+  minutes: RoomMinutes;
+  expiresAt: string;
+  battleId: string | null;
+  isChallenger: boolean;
+  challenger: RoomPlayer;
+  challenged: RoomPlayer;
+}
+
+export interface Notifications {
+  serverTime: string;
+  friendRequests: number;
+  incomingChallenges: Challenge[];
+  /** Your latest challenge: waiting, or answered in the last minute. */
+  outgoingChallenge: Challenge | null;
+}
+
 export interface ApiClient {
+  getFriends(): Promise<FriendList>;
+  getFriendStatus(username: string): Promise<FriendStatus>;
+  sendFriendRequest(username: string): Promise<{ status: FriendStatusKind; userId: string }>;
+  respondFriendRequest(
+    userId: string,
+    accept: boolean,
+  ): Promise<{ status: FriendStatusKind; userId: string }>;
+  removeFriend(userId: string): Promise<void>;
+  sendChallenge(
+    userId: string,
+    difficulty: RoomDifficulty,
+    minutes: RoomMinutes,
+  ): Promise<Challenge>;
+  respondChallenge(challengeId: string, accept: boolean): Promise<Challenge>;
+  cancelChallenge(challengeId: string): Promise<Challenge>;
+  getNotifications(): Promise<Notifications>;
   createRoom(difficulty: RoomDifficulty, minutes: RoomMinutes): Promise<Room>;
   getCurrentRoom(): Promise<Room | null>;
   getRoomByCode(code: string): Promise<Room>;
@@ -177,6 +246,20 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   }
 
   return {
+    getFriends: () => request("GET", "/api/friends"),
+    getFriendStatus: (username) =>
+      request("GET", `/api/friends/status/${encodeURIComponent(username)}`),
+    sendFriendRequest: (username) => request("POST", "/api/friends/request", { username }),
+    respondFriendRequest: (userId, accept) =>
+      request("POST", "/api/friends/respond", { userId, accept }),
+    removeFriend: async (userId) => {
+      await request("POST", "/api/friends/remove", { userId });
+    },
+    sendChallenge: (userId, difficulty, minutes) =>
+      request("POST", "/api/challenges", { userId, difficulty, minutes }),
+    respondChallenge: (id, accept) => request("POST", `/api/challenges/${id}/respond`, { accept }),
+    cancelChallenge: (id) => request("POST", `/api/challenges/${id}/cancel`),
+    getNotifications: () => request("GET", "/api/notifications"),
     createRoom: (difficulty, minutes) => request("POST", "/api/rooms", { difficulty, minutes }),
     getCurrentRoom: async () =>
       (await request<{ room: Room | null }>("GET", "/api/rooms/current")).room,

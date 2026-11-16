@@ -12,11 +12,13 @@ export interface BattleWatchHandlers {
 export interface LiveService {
   watchBattle(battleId: string, userId: string, handlers: BattleWatchHandlers): () => void;
   /**
-   * Join the site-wide lobby as `userId` and report how many players are
-   * connected (each player once, however many tabs). Returns a function that
-   * leaves the lobby.
+   * Join the site-wide lobby as `userId` and report which players are
+   * connected (user ids, each player once however many tabs). Returns a
+   * function that leaves the lobby.
    */
-  joinLobby(userId: string, onCount: (count: number) => void): () => void;
+  joinLobby(userId: string, onMembers: (userIds: string[]) => void): () => void;
+  /** Calls `onChange` when a friend request or challenge involving the player changes. */
+  watchNotifications(userId: string, onChange: () => void): () => void;
   /** Calls `onChange` when the room row changes (someone joined, left, or it started). */
   watchRoom(roomId: string, onChange: () => void): () => void;
 }
@@ -135,19 +137,41 @@ export function createSupabaseLive(supabase: SupabaseClient): LiveService {
       };
     },
 
-    joinLobby(userId, onCount) {
+    joinLobby(userId, onMembers) {
       const lobby = supabase.channel("lobby", {
         config: { private: true, presence: { key: userId } },
       });
       lobby
         .on("presence", { event: "sync" }, () => {
-          onCount(Object.keys(lobby.presenceState()).length);
+          onMembers(Object.keys(lobby.presenceState()));
         })
         .subscribe((status) => {
           if (status === "SUBSCRIBED") void lobby.track({ online: true });
         });
       return () => {
         void supabase.removeChannel(lobby);
+      };
+    },
+
+    watchNotifications(userId, onChange) {
+      // Row-level security limits each stream to rows involving this player.
+      const filters = [
+        ["friendships", "addressee_id"],
+        ["friendships", "requester_id"],
+        ["challenges", "challenged_id"],
+        ["challenges", "challenger_id"],
+      ] as const;
+      let channel = supabase.channel(`notifications:${userId}`);
+      for (const [table, column] of filters) {
+        channel = channel.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table, filter: `${column}=eq.${userId}` },
+          () => onChange(),
+        );
+      }
+      channel.subscribe();
+      return () => {
+        void supabase.removeChannel(channel);
       };
     },
 

@@ -13,6 +13,7 @@ import { Button } from "../components/ui";
 import { ApiError } from "../lib/api";
 import type { HistoryEntry, PublicProfile } from "../lib/live";
 import { nextTier, tierFor } from "../lib/tiers";
+import { FriendButton } from "../friends/FriendButton";
 import { PHONE_QUERY, useMediaQuery } from "../lib/useMediaQuery";
 import { useServices } from "../services";
 
@@ -425,6 +426,7 @@ export function ProfilePage() {
   const main = [...languages].sort((x, y) => y[1] - x[1])[0];
 
   const mainLanguage = main ? LANGUAGE_LABELS[main[0]].split(" ")[0]! : "–";
+  // Your own profile: change avatar. Someone else's (when signed in): friendship.
   const picker = isMe ? (
     <AvatarPicker
       current={profile.avatar}
@@ -433,6 +435,8 @@ export function ProfilePage() {
         setReload((n) => n + 1);
       }}
     />
+  ) : user ? (
+    <FriendButton username={profile.username} />
   ) : null;
   const chart = (
     <figure className="m-0 flex flex-col gap-2 border border-line bg-panel px-4 py-3 md:px-5 md:py-4">

@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
+import { NotificationsProvider } from "./friends/notifications";
 import { OnlineProvider } from "./lib/online";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -12,6 +13,9 @@ import { LoginPage } from "./pages/LoginPage";
 const ArenaPage = lazy(() => import("./pages/ArenaPage").then((m) => ({ default: m.ArenaPage })));
 const BattlePage = lazy(() =>
   import("./pages/BattlePage").then((m) => ({ default: m.BattlePage })),
+);
+const FriendsPage = lazy(() =>
+  import("./pages/FriendsPage").then((m) => ({ default: m.FriendsPage })),
 );
 const JoinPage = lazy(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
 const RoomPage = lazy(() => import("./pages/RoomPage").then((m) => ({ default: m.RoomPage })));
@@ -51,66 +55,76 @@ function HistoryRedirect() {
 export function App() {
   return (
     <OnlineProvider>
-      <Layout>
-        <Suspense fallback={<PageLoading />}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/arena"
-              element={
-                <RequireAuth>
-                  <ArenaPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/battle/:id"
-              element={
-                <RequireAuth>
-                  <BattlePage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/join/:code"
-              element={
-                <RequireAuth>
-                  <JoinPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/room/:id"
-              element={
-                <RequireAuth>
-                  <RoomPage />
-                </RequireAuth>
-              }
-            />
-            <Route path="/rankings" element={<RankingsPage />} />
-            <Route path="/u/:username" element={<ProfilePage />} />
-            <Route
-              path="/history"
-              element={
-                <RequireAuth>
-                  <HistoryRedirect />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="*"
-              element={
-                <main className="p-10 text-center">
-                  <h1 className="font-display text-4xl font-bold uppercase italic">
-                    Page not found
-                  </h1>
-                </main>
-              }
-            />
-          </Routes>
-        </Suspense>
-      </Layout>
+      <NotificationsProvider>
+        <Layout>
+          <Suspense fallback={<PageLoading />}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/arena"
+                element={
+                  <RequireAuth>
+                    <ArenaPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/battle/:id"
+                element={
+                  <RequireAuth>
+                    <BattlePage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/join/:code"
+                element={
+                  <RequireAuth>
+                    <JoinPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/room/:id"
+                element={
+                  <RequireAuth>
+                    <RoomPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/friends"
+                element={
+                  <RequireAuth>
+                    <FriendsPage />
+                  </RequireAuth>
+                }
+              />
+              <Route path="/rankings" element={<RankingsPage />} />
+              <Route path="/u/:username" element={<ProfilePage />} />
+              <Route
+                path="/history"
+                element={
+                  <RequireAuth>
+                    <HistoryRedirect />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="*"
+                element={
+                  <main className="p-10 text-center">
+                    <h1 className="font-display text-4xl font-bold uppercase italic">
+                      Page not found
+                    </h1>
+                  </main>
+                }
+              />
+            </Routes>
+          </Suspense>
+        </Layout>
+      </NotificationsProvider>
     </OnlineProvider>
   );
 }

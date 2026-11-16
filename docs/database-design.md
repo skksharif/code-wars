@@ -113,6 +113,13 @@ No client policies.
 - `battles.is_rated` (default true) marks custom battles as unrated: `finish_battle` records results but leaves `profiles.rating`, wins, losses and draws untouched (`rating_after = rating_before`). The `rating_history` view and `get_public_profile` count ranked battles only.
 - Functions (service_role only): `create_room`, `get_current_room`, `get_room`, `get_room_by_code`, `join_room`, `leave_room`, `start_room` (picks the problem, creates the unrated battle, 10 s get-ready), `rematch_room`; `expire_rooms` also runs from `sweep_stale` every minute.
 
+### friendships and challenges (migration 20261116000010)
+- `friendships`: one row per pair (unique on the ordered pair): `requester_id`, `addressee_id`, `status` (pending/accepted/declined), `created_at`, `responded_at`.
+- `challenges`: `challenger_id`, `challenged_id`, `difficulty`, `duration_minutes`, `status` (pending/accepted/declined/expired/cancelled), `cancel_reason` (withdrawn/challenger_busy/challenged_busy/unfriended), `battle_id`, `expires_at` (created + 30 s), `responded_at`. At most one pending challenge per challenger.
+- RLS: each row readable only by its two players (also what Realtime delivers); no client writes.
+- Trigger `battle_players_cancel_challenges`: entering any battle cancels the player's pending challenges, sent or received.
+- Functions (service_role only): `send_friend_request`, `respond_friend_request`, `remove_friend`, `get_friends`, `get_friend_status`, `send_challenge`, `respond_challenge`, `cancel_challenge`, `get_notifications`; helpers `head_to_head`, `are_friends`, `pick_problem`, `start_challenge_battle`, `expire_challenges` (also from `sweep_stale`).
+
 ### Views
 - `leaderboard`: username, rating, wins, losses, draws, rank. Public read.
 - `rating_history`: from finished `battle_players` rows (user, battle, rating_before, rating_after, delta, result, finished_at). Under RLS a user sees rows for battles they took part in.

@@ -98,7 +98,7 @@ describe("routing and access", () => {
     });
   });
 
-  it("puts Arena and Rankings in the bottom bar for signed-in players", async () => {
+  it("puts Arena, Rankings and Friends in the bottom bar for signed-in players", async () => {
     renderApp(createFakeAuth(TEST_USER), "/arena");
     const tabs = await screen.findByRole("navigation", { name: "Sections" });
     expect(within(tabs).getByRole("link", { name: "Arena" })).toHaveAttribute("href", "/arena");
@@ -106,7 +106,8 @@ describe("routing and access", () => {
       "href",
       "/rankings",
     );
-    expect(within(tabs).getAllByRole("link")).toHaveLength(2);
+    expect(within(tabs).getByRole("link", { name: "Friends" })).toHaveAttribute("href", "/friends");
+    expect(within(tabs).getAllByRole("link")).toHaveLength(3);
   });
 
   it("has no bottom tab bar for visitors", async () => {

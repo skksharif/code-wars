@@ -96,7 +96,9 @@ describe("lobby", () => {
 describe("players online", () => {
   const announce = (count: number) =>
     act(() => {
-      for (const member of services.lobby) member.onCount(count);
+      for (const member of services.lobby) {
+        member.onMembers(Array.from({ length: count }, (_, i) => `user-${i + 1}`));
+      }
     });
 
   it("joins the lobby when signed in and shows the count in the arena", async () => {

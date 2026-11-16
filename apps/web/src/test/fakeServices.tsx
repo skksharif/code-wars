@@ -3,7 +3,15 @@ import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { App } from "../App";
 import { AuthProvider } from "../auth/AuthContext";
-import type { ApiClient, BattlePlayer, BattleState, Room } from "../lib/api";
+import type {
+  ApiClient,
+  BattlePlayer,
+  BattleState,
+  Challenge,
+  FriendList,
+  Notifications,
+  Room,
+} from "../lib/api";
 import type {
   BattleWatchHandlers,
   FinalSubmission,
@@ -103,6 +111,24 @@ export function room(overrides: Partial<Room> = {}): Room {
   };
 }
 
+/** A challenge from the test user (coder_42) to byte_rival, waiting, unless overridden. */
+export function challenge(overrides: Partial<Challenge> = {}): Challenge {
+  return {
+    serverTime: iso(0),
+    id: "33333333-3333-4333-8333-333333333333",
+    status: "pending",
+    cancelReason: null,
+    difficulty: "any",
+    minutes: 15,
+    expiresAt: iso(30_000),
+    battleId: null,
+    isChallenger: true,
+    challenger: { userId: "user-1", username: "coder_42", avatar: "nova", rating: 1216 },
+    challenged: { userId: "user-2", username: "byte_rival", avatar: "pixel", rating: 1180 },
+    ...overrides,
+  };
+}
+
 export const ROOM_GUEST = {
   userId: "user-2",
   username: "byte_rival",
@@ -115,7 +141,11 @@ export interface FakeServices extends Services {
   /** Handlers registered by the battle page, to simulate live events. */
   watchers: BattleWatchHandlers[];
   /** Who is in the site-wide lobby, and how to tell them the online count. */
-  lobby: { userId: string; onCount: (count: number) => void }[];
+  lobby: { userId: string; onMembers: (userIds: string[]) => void }[];
+  /** App-wide watchers for friend requests and challenges. */
+  notificationWatchers: (() => void)[];
+  notifications: Notifications;
+  friendList: FriendList;
   /** Room pages watching for changes, to simulate live room updates. */
   roomWatchers: (() => void)[];
   solutions: FinalSubmission[];
@@ -128,15 +158,58 @@ export function createFakeServices(): FakeServices {
   const watchers: BattleWatchHandlers[] = [];
   const lobby: FakeServices["lobby"] = [];
   const roomWatchers: (() => void)[] = [];
+  const notificationWatchers: (() => void)[] = [];
   const services: FakeServices = {
     watchers,
     lobby,
     roomWatchers,
+    notificationWatchers,
+    notifications: {
+      serverTime: iso(0),
+      friendRequests: 0,
+      incomingChallenges: [],
+      outgoingChallenge: null,
+    },
+    friendList: { friends: [], incoming: [], outgoing: [] },
     solutions: [],
     leaderboard: [],
     history: [],
     profiles: {},
     api: {
+      getFriends: vi.fn<ApiClient["getFriends"]>(async () => services.friendList),
+      getFriendStatus: vi.fn<ApiClient["getFriendStatus"]>(async () => ({
+        userId: "user-9",
+        status: "none",
+        inBattle: false,
+        headToHead: { wins: 0, losses: 0, draws: 0 },
+      })),
+      sendFriendRequest: vi.fn<ApiClient["sendFriendRequest"]>(async () => ({
+        status: "outgoing",
+        userId: "user-9",
+      })),
+      respondFriendRequest: vi.fn<ApiClient["respondFriendRequest"]>(async (userId, accept) => ({
+        status: accept ? "friends" : "none",
+        userId,
+      })),
+      removeFriend: vi.fn<ApiClient["removeFriend"]>(async () => undefined),
+      sendChallenge: vi.fn<ApiClient["sendChallenge"]>(async (userId, difficulty, minutes) =>
+        challenge({
+          difficulty,
+          minutes,
+          challenged: { userId, username: "byte_rival", avatar: "pixel", rating: 1180 },
+        }),
+      ),
+      respondChallenge: vi.fn<ApiClient["respondChallenge"]>(async (_id, accept) =>
+        challenge({
+          isChallenger: false,
+          status: accept ? "accepted" : "declined",
+          battleId: accept ? BATTLE_ID : null,
+        }),
+      ),
+      cancelChallenge: vi.fn<ApiClient["cancelChallenge"]>(async () =>
+        challenge({ status: "cancelled", cancelReason: "withdrawn" }),
+      ),
+      getNotifications: vi.fn<ApiClient["getNotifications"]>(async () => services.notifications),
       createRoom: vi.fn<ApiClient["createRoom"]>(async (difficulty, minutes) =>
         room({ difficulty, minutes }),
       ),
@@ -194,8 +267,14 @@ export function createFakeServices(): FakeServices {
           roomWatchers.splice(roomWatchers.indexOf(onChange), 1);
         };
       },
-      joinLobby: (userId, onCount) => {
-        const member = { userId, onCount };
+      watchNotifications: (_userId, onChange) => {
+        notificationWatchers.push(onChange);
+        return () => {
+          notificationWatchers.splice(notificationWatchers.indexOf(onChange), 1);
+        };
+      },
+      joinLobby: (userId, onMembers) => {
+        const member = { userId, onMembers };
         lobby.push(member);
         return () => {
           lobby.splice(lobby.indexOf(member), 1);

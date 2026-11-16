@@ -28,6 +28,18 @@ Base path `/api`. Every route except `/api/health` requires `Authorization: Bear
 | POST | `/rooms/:id/start` | — | Room with `battleId` | Host only (`NOT_HOST`), needs a guest (`ROOM_NOT_READY`); creates an unrated battle |
 | POST | `/battles/:id/rematch` | — | Room | Finished custom battles only; same settings, friend put in if free |
 
+| GET | `/friends` | — | `{ friends: [{ userId, username, avatar, rating, friendsSince, inBattle, headToHead: { wins, losses, draws } }], incoming, outgoing }` | |
+| GET | `/friends/status/:username` | — | `{ userId, status: none\|outgoing\|incoming\|friends\|self, inBattle, headToHead }` | For the profile button |
+| POST | `/friends/request` | `{ username }` | `{ status, userId }` | `PLAYER_NOT_FOUND`, `FRIEND_SELF`, `ALREADY_FRIENDS`, `REQUEST_DECLINED` (24 h), `FRIEND_LIMIT`, `TOO_MANY_REQUESTS`. Asking someone who asked you accepts |
+| POST | `/friends/respond` | `{ userId, accept }` | `{ status, userId }` | `REQUEST_NOT_FOUND` |
+| POST | `/friends/remove` | `{ userId }` | `{ status: "none", userId }` | Unfriend or withdraw a request; ends pending challenges between the two |
+| POST | `/challenges` | `{ userId, difficulty, minutes }` | Challenge | Friends only (`NOT_FRIENDS`); `FRIEND_BUSY`, `ALREADY_IN_BATTLE`. Replaces your previous unanswered challenge; a crossed challenge starts the battle |
+| POST | `/challenges/:id/respond` | `{ accept }` | Challenge (with `battleId` when accepted) | `CHALLENGE_EXPIRED` (410), `CHALLENGE_GONE`; returns `status: cancelled, cancelReason: challenger_busy` if the challenger got busy |
+| POST | `/challenges/:id/cancel` | — | Challenge | Challenger only |
+| GET | `/notifications` | — | `{ friendRequests, incomingChallenges, outgoingChallenge, serverTime }` | Bell and pop-ups |
+
+Challenge: `{ id, status: pending|accepted|declined|expired|cancelled, cancelReason, difficulty, minutes, expiresAt, battleId, isChallenger, challenger, challenged, serverTime }`.
+
 Room: `{ id, code, status: open|started|closed|expired, difficulty, minutes, expiresAt, battleId, isHost, host, guest, serverTime }`, where host and guest are `{ userId, username, avatar, rating }`. `GET /battles/:id` also returns `battle.isRated` and `battle.roomCode`.
 
 Scheduled (Cron Trigger, every minute): `finalize_expired_battles()` and `sweep_stale()`.
