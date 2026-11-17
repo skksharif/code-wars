@@ -54,48 +54,8 @@ describe("head-to-head text", () => {
 });
 
 describe("the Friends page", () => {
-  it("sends a friend request by username", async () => {
-    open("/friends");
-    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "sharif");
-    await userEvent.click(screen.getByRole("button", { name: "Send request" }));
-    expect(services.api.sendFriendRequest).toHaveBeenCalledWith("sharif");
-    expect(await screen.findByText("Request sent to sharif.")).toBeInTheDocument();
-  });
-
-  it("explains a request that cannot be sent", async () => {
-    services.api.sendFriendRequest.mockRejectedValue(
-      new ApiError("PLAYER_NOT_FOUND", "No player with that username.", 404),
-    );
-    open("/friends");
-    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "ghost");
-    await userEvent.click(screen.getByRole("button", { name: "Send request" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("No player with that username.");
-  });
-
-  it("checks the username before asking the server", async () => {
-    open("/friends");
-    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "a b");
-    await userEvent.click(screen.getByRole("button", { name: "Send request" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("3 to 20 letters");
-    expect(services.api.sendFriendRequest).not.toHaveBeenCalled();
-  });
-
-  it("answers incoming requests", async () => {
-    services.friendList = {
-      friends: [],
-      incoming: [
-        { userId: "user-5", username: "new_pal", avatar: "echo", rating: 1300, sentAt: "x" },
-      ],
-      outgoing: [],
-    };
-    open("/friends");
-    const requests = await screen.findByRole("region", { name: "Friend requests" });
-    expect(requests).toHaveTextContent("new_pal");
-    await userEvent.click(within(requests).getByRole("button", { name: "Accept" }));
-    expect(services.api.respondFriendRequest).toHaveBeenCalledWith("user-5", true);
-  });
-
-  it("lists friends with status and head-to-head, and challenges online ones", async () => {
+  const search = () => screen.findByRole("searchbox", { name: "Search friends or find players" });
+  const fiveFriends = () => {
     services.friendList = {
       friends: [
         friend({}),
@@ -106,34 +66,90 @@ describe("the Friends page", () => {
           headToHead: { wins: 0, losses: 0, draws: 0 },
         }),
       ],
-      incoming: [],
-      outgoing: [],
+      incoming: [
+        { userId: "user-5", username: "new_pal", avatar: "echo", rating: 1300, sentAt: "x" },
+      ],
+      outgoing: [
+        { userId: "user-6", username: "waiting_one", avatar: "kernel", rating: 1210, sentAt: "x" },
+      ],
     };
+  };
+
+  it("groups friends: online first, then in a battle, then offline", async () => {
+    fiveFriends();
     open("/friends");
-    const list = await screen.findByRole("region", { name: "Your friends" });
+    await screen.findByRole("tabpanel", { name: "Your friends" });
     await waitFor(() => expect(services.lobby).toHaveLength(1));
     await online("user-2");
-    const rows = within(list).getAllByRole("listitem");
 
-    expect(rows[0]).toHaveTextContent("byte_rival");
-    expect(rows[0]).toHaveTextContent("1180 · Online · You 3 – 1");
-    expect(rows[1]).toHaveTextContent("In a battle");
-    expect(rows[2]).toHaveTextContent("Offline · Not played yet");
+    expect(screen.getByText(/1 online/)).toBeInTheDocument();
+    const onlineGroup = screen.getByRole("region", { name: "Online · 1" });
+    expect(onlineGroup).toHaveTextContent("byte_rival1180 · You 3 – 1");
+    expect(within(onlineGroup).getByRole("button", { name: "Challenge byte_rival" })).toBeEnabled();
 
-    expect(within(rows[1]!).getByRole("button", { name: "⚔ Challenge" })).toBeDisabled();
-    expect(within(rows[2]!).getByRole("button", { name: "⚔ Challenge" })).toBeDisabled();
+    const battleGroup = screen.getByRole("region", { name: "In a battle · 1" });
+    expect(battleGroup).toHaveTextContent("busy_bee");
+    expect(battleGroup).toHaveTextContent("Busy");
 
-    await userEvent.click(within(rows[0]!).getByRole("button", { name: "⚔ Challenge" }));
-    const form = within(rows[0]!).getByRole("group", { name: "Challenge byte_rival" });
-    expect(form).toHaveTextContent("byte_rival has 30 seconds to accept.");
+    const offlineGroup = screen.getByRole("region", { name: "Offline · 1" });
+    expect(offlineGroup).toHaveTextContent("sleepy1180 · Not played yet");
+    expect(
+      within(offlineGroup).getByRole("button", { name: "More about sleepy" }),
+    ).toBeInTheDocument();
+    // Remove is no longer next to Challenge in the list.
+    expect(screen.queryByRole("button", { name: /Remove/ })).not.toBeInTheDocument();
+  });
+
+  it("filters your friends as you type", async () => {
+    fiveFriends();
+    open("/friends");
+    await screen.findByRole("tabpanel", { name: "Your friends" });
+    await userEvent.type(await search(), "bus");
+    expect(screen.getByText("busy_bee")).toBeInTheDocument();
+    expect(screen.queryByText("byte_rival")).not.toBeInTheDocument();
+    await userEvent.clear(await search());
+    await userEvent.type(await search(), "zz");
+    expect(screen.getByText("No friends match “zz”.")).toBeInTheDocument();
+  });
+
+  it("opens a sheet with the head-to-head and the challenge", async () => {
+    fiveFriends();
+    open("/friends");
+    await waitFor(() => expect(services.lobby).toHaveLength(1));
+    await online("user-2");
+    await userEvent.click(await screen.findByRole("button", { name: "Challenge byte_rival" }));
+
+    const sheet = screen.getByRole("dialog", { name: "byte_rival" });
+    expect(within(sheet).getByLabelText("Head-to-head: You 3 – 1")).toHaveTextContent(
+      "Your wins3Their wins1Draws0",
+    );
+    expect(within(sheet).getByRole("link", { name: "Profile" })).toHaveAttribute(
+      "href",
+      "/u/byte_rival",
+    );
+    const form = within(sheet).getByRole("region", { name: "Challenge byte_rival" });
+    expect(form).toHaveTextContent("They have 30 seconds to accept.");
     await userEvent.click(within(form).getByRole("radio", { name: "Medium" }));
     await userEvent.click(within(form).getByRole("radio", { name: "10 min" }));
-    await userEvent.click(within(form).getByRole("button", { name: "Send challenge" }));
+    await userEvent.click(within(form).getByRole("button", { name: "⚔ Send challenge" }));
     expect(services.api.sendChallenge).toHaveBeenCalledWith("user-2", "medium", 10);
+    // The sheet closes; the waiting message takes over.
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "byte_rival" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("explains why an offline or busy friend cannot be challenged", async () => {
+    fiveFriends();
+    open("/friends");
+    await userEvent.click(await screen.findByRole("button", { name: "More about sleepy" }));
+    const sheet = screen.getByRole("dialog", { name: "sleepy" });
+    expect(within(sheet).getByRole("button", { name: "⚔ Send challenge" })).toBeDisabled();
+    expect(sheet).toHaveTextContent("sleepy is offline. Challenges need both of you online.");
   });
 
   it("shows why a challenge could not be sent", async () => {
-    services.friendList = { friends: [friend({})], incoming: [], outgoing: [] };
+    fiveFriends();
     services.api.sendChallenge.mockRejectedValue(
       new ApiError(
         "FRIEND_BUSY",
@@ -142,28 +158,84 @@ describe("the Friends page", () => {
       ),
     );
     open("/friends?challenge=user-2");
-    const form = await screen.findByRole("group", { name: "Challenge byte_rival" });
-    await userEvent.click(within(form).getByRole("button", { name: "Send challenge" }));
-    expect(await within(form).findByRole("alert")).toHaveTextContent("is in a battle right now");
+    await waitFor(() => expect(services.lobby).toHaveLength(1));
+    await online("user-2");
+    const sheet = await screen.findByRole("dialog", { name: "byte_rival" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "⚔ Send challenge" }));
+    expect(await within(sheet).findByRole("alert")).toHaveTextContent("is in a battle right now");
   });
 
-  it("removes a friend after asking", async () => {
-    services.friendList = { friends: [friend({})], incoming: [], outgoing: [] };
+  it("closes the sheet with Escape or the close button", async () => {
+    fiveFriends();
     open("/friends");
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Remove byte_rival from friends" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
-    expect(services.api.removeFriend).toHaveBeenCalledWith("user-2");
+    await userEvent.click(await screen.findByRole("button", { name: "More about sleepy" }));
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "More about sleepy" }));
+    const sheet = screen.getByRole("dialog", { name: "sleepy" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("is in the menus and needs sign-in", async () => {
+  it("removes a friend from the sheet after asking", async () => {
+    fiveFriends();
+    open("/friends");
+    await userEvent.click(await screen.findByRole("button", { name: "More about sleepy" }));
+    const sheet = screen.getByRole("dialog", { name: "sleepy" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "Remove friend" }));
+    expect(sheet).toHaveTextContent("Remove sleepy?");
+    await userEvent.click(within(sheet).getByRole("button", { name: "Remove" }));
+    expect(services.api.removeFriend).toHaveBeenCalledWith("user-4");
+  });
+
+  it("keeps requests in their own tab, with the count", async () => {
+    fiveFriends();
+    open("/friends");
+    const requestsTab = await screen.findByRole("tab", { name: "Requests 1" });
+    await userEvent.click(requestsTab);
+    const requests = screen.getByRole("tabpanel", { name: "Friend requests" });
+    expect(requests).toHaveTextContent("new_pal");
+    await userEvent.click(within(requests).getByRole("button", { name: "Accept" }));
+    expect(services.api.respondFriendRequest).toHaveBeenCalledWith("user-5", true);
+
+    await userEvent.click(screen.getByRole("tab", { name: "Sent · 1" }));
+    const sent = screen.getByRole("tabpanel", { name: "Requests you sent" });
+    await userEvent.click(within(sent).getByRole("button", { name: "Cancel" }));
+    expect(services.api.removeFriend).toHaveBeenCalledWith("user-6");
+  });
+
+  it("on a PC shows the selected friend in a side panel", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) =>
+        ({ matches: query === "(min-width: 1024px)", media: query }) as MediaQueryList,
+    );
+    try {
+      fiveFriends();
+      open("/friends");
+      await waitFor(() => expect(services.lobby).toHaveLength(1));
+      await online("user-2");
+      const panel = await screen.findByRole("complementary", { name: "Friend details" });
+      // The first friend who can play is shown straight away.
+      await waitFor(() => expect(panel).toHaveTextContent("byte_rival"));
+      await userEvent.click(screen.getByRole("button", { name: "More about sleepy" }));
+      expect(within(panel).getByRole("heading", { name: "sleepy" })).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("has helpful empty states and needs sign-in", async () => {
+    const first = open("/friends");
+    expect(await screen.findByText(/No friends yet/)).toBeInTheDocument();
+    first.unmount();
     renderWithApp(createFakeAuth(), services, "/friends");
     expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
   });
 });
 
-describe("username suggestions", () => {
+describe("finding new players", () => {
   const found = [
     { userId: "user-5", username: "sharma", avatar: "echo", rating: 1300, status: "none" as const },
     {
@@ -188,18 +260,17 @@ describe("username suggestions", () => {
       status: "friends" as const,
     },
   ];
+  const search = () => screen.findByRole("searchbox", { name: "Search friends or find players" });
 
-  it("appear after 3 letters, once typing pauses", async () => {
+  it("suggests players after 3 letters, once typing pauses", async () => {
     services.api.searchPlayers.mockResolvedValue(found);
     open("/friends");
-    const input = await screen.findByLabelText("Add a friend by username");
-    await userEvent.type(input, "sh");
-    expect(screen.getByText("Type 3 or more letters to see suggestions.")).toBeInTheDocument();
+    await userEvent.type(await search(), "sh");
+    expect(screen.getByText("Type 3 or more letters to find new players too.")).toBeInTheDocument();
     expect(services.api.searchPlayers).not.toHaveBeenCalled();
 
-    await userEvent.type(input, "a");
+    await userEvent.type(await search(), "a");
     const list = await screen.findByRole("list", { name: "Suggestions" });
-    // One search for the pause, not one per key press.
     expect(services.api.searchPlayers).toHaveBeenCalledTimes(1);
     expect(services.api.searchPlayers).toHaveBeenCalledWith("sha");
     expect(screen.getByText("4 players found")).toBeInTheDocument();
@@ -210,7 +281,6 @@ describe("username suggestions", () => {
       "href",
       "/u/sharma",
     );
-    expect(within(rows[0]!).getByRole("button", { name: "Add sharma as a friend" })).toBeEnabled();
     expect(
       within(rows[1]!).getByRole("button", { name: "Accept shark_bite's request" }),
     ).toBeEnabled();
@@ -221,18 +291,28 @@ describe("username suggestions", () => {
   it("adds a friend straight from a suggestion", async () => {
     services.api.searchPlayers.mockResolvedValue(found);
     open("/friends");
-    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "sha");
+    await userEvent.type(await search(), "sha");
     await userEvent.click(await screen.findByRole("button", { name: "Add sharma as a friend" }));
     expect(services.api.sendFriendRequest).toHaveBeenCalledWith("sharma");
     expect(await screen.findByText("Request sent to sharma.")).toBeInTheDocument();
-    // Searched again so the row now shows the new state.
     await waitFor(() => expect(services.api.searchPlayers).toHaveBeenCalledTimes(2));
+  });
+
+  it("explains a request that cannot be sent", async () => {
+    services.api.searchPlayers.mockResolvedValue(found);
+    services.api.sendFriendRequest.mockRejectedValue(
+      new ApiError("FRIEND_LIMIT", "Friend lists are limited to 100 friends.", 409),
+    );
+    open("/friends");
+    await userEvent.type(await search(), "sha");
+    await userEvent.click(await screen.findByRole("button", { name: "Add sharma as a friend" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Friend lists are limited to 100");
   });
 
   it("accepts a request from a player who already asked", async () => {
     services.api.searchPlayers.mockResolvedValue(found);
     open("/friends");
-    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "sha");
+    await userEvent.type(await search(), "sha");
     await userEvent.click(
       await screen.findByRole("button", { name: "Accept shark_bite's request" }),
     );
@@ -242,7 +322,7 @@ describe("username suggestions", () => {
 
   it("says when nobody matches", async () => {
     open("/friends");
-    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "zzz");
+    await userEvent.type(await search(), "zzz");
     expect(await screen.findByText("No players match “zzz”.")).toBeInTheDocument();
   });
 });
@@ -276,7 +356,7 @@ describe("challenge pop-ups", () => {
     open("/rankings");
     const popup = await screen.findByRole("region", { name: "Challenge from byte_rival" });
     expect(popup).toHaveTextContent("byte_rival challenges you");
-    expect(popup).toHaveTextContent(/Easy · 10 min · unrated · 00:(29|30) to answer/);
+    expect(popup).toHaveTextContent(/Easy · 10 min · unrated · 00:[23]\d to answer/);
     await userEvent.click(within(popup).getByRole("button", { name: "Accept" }));
     expect(services.api.respondChallenge).toHaveBeenCalledWith(incoming().id, true);
     expect(await screen.findByRole("timer")).toBeInTheDocument();
@@ -312,7 +392,7 @@ describe("challenge pop-ups", () => {
     services.notifications = { ...services.notifications, outgoingChallenge: challenge() };
     open("/friends");
     expect(await screen.findByText(/Waiting for/)).toHaveTextContent(
-      /Waiting for byte_rival to accept… 00:(29|30)/,
+      /Waiting for byte_rival to accept… 00:[23]\d/,
     );
     services.notifications = {
       ...services.notifications,

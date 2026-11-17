@@ -43,7 +43,9 @@ body {
   text-shadow: 0 0 28px rgba(255, 46, 154, 0.7);
 }
 
-:focus-visible {
+/* Keyboard focus ring. Not on headings focused by code (tabindex="-1") when a
+   sheet or page opens: they cannot be tabbed to, so a ring there only confuses. */
+:focus-visible:not([tabindex="-1"]) {
   outline: 2px solid var(--color-you);
   outline-offset: 2px;
 }
