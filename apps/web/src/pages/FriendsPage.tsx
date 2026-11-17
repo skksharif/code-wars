@@ -5,7 +5,7 @@ import { Avatar } from "../components/Avatar";
 import { Button } from "../components/ui";
 import { useNotifications } from "../friends/notifications";
 import { headToHeadText } from "../friends/format";
-import { ApiError, type Friend, type FriendList } from "../lib/api";
+import { ApiError, type FoundPlayer, type Friend, type FriendList } from "../lib/api";
 import { useOnlineUsers } from "../lib/online";
 import { DifficultyChooser, MinutesChooser, UnratedBadge } from "../rooms/parts";
 import { useServices } from "../services";
@@ -174,6 +174,148 @@ function FriendRow({
   );
 }
 
+const SEARCH_DELAY_MS = 250;
+const SEARCHABLE = /^[A-Za-z0-9_]{3,20}$/;
+
+/**
+ * Players matching what is typed (after 3 letters), each with a one-tap action:
+ * Add, Accept (they asked you), or a note when already requested or friends.
+ */
+function PlayerSuggestions({
+  query,
+  onChanged,
+}: {
+  query: string;
+  onChanged: (message: string) => void;
+}) {
+  const { api } = useServices();
+  const text = query.trim();
+  const [results, setResults] = useState<FoundPlayer[] | "loading" | "error" | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
+
+  // Wait until typing pauses, and ignore answers to older searches.
+  useEffect(() => {
+    setActionError(null);
+    if (!SEARCHABLE.test(text)) {
+      setResults(null);
+      return;
+    }
+    let current = true;
+    setResults((r) => (Array.isArray(r) ? r : "loading"));
+    const timer = setTimeout(() => {
+      api.searchPlayers(text).then(
+        (found) => current && setResults(found),
+        () => current && setResults("error"),
+      );
+    }, SEARCH_DELAY_MS);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [api, text, round]);
+
+  async function act(player: FoundPlayer) {
+    setBusy(player.userId);
+    setActionError(null);
+    try {
+      if (player.status === "incoming") {
+        await api.respondFriendRequest(player.userId, true);
+        onChanged(`You and ${player.username} are now friends.`);
+      } else {
+        const result = await api.sendFriendRequest(player.username);
+        onChanged(
+          result.status === "friends"
+            ? `You and ${player.username} are now friends.`
+            : `Request sent to ${player.username}.`,
+        );
+      }
+    } catch (caught) {
+      setActionError(caught instanceof ApiError ? caught.message : "Something went wrong.");
+    } finally {
+      setBusy(null);
+      setRound((n) => n + 1);
+    }
+  }
+
+  if (text.length > 0 && text.length < 3) {
+    return <p className="m-0 text-sm text-muted">Type 3 or more letters to see suggestions.</p>;
+  }
+  if (results === null) return null;
+  if (results === "loading") {
+    return (
+      <p role="status" className="m-0 text-sm text-muted">
+        Searching…
+      </p>
+    );
+  }
+  if (results === "error") {
+    return (
+      <p role="alert" className="m-0 text-sm text-rival">
+        Could not search right now.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <p role="status" className="m-0 text-xs text-muted">
+        {results.length === 0
+          ? `No players match “${text}”.`
+          : `${results.length} player${results.length === 1 ? "" : "s"} found`}
+      </p>
+      {results.length > 0 ? (
+        <ul aria-label="Suggestions" className="m-0 flex list-none flex-col border border-line p-0">
+          {results.map((p) => (
+            <li
+              key={p.userId}
+              className="flex items-center gap-3 border-t border-line px-3 py-2 first:border-t-0"
+            >
+              <Avatar id={p.avatar} size={32} decorative />
+              <Link
+                to={`/u/${p.username}`}
+                className="min-w-0 flex-1 truncate font-bold text-ink no-underline hover:text-you"
+              >
+                {p.username}
+              </Link>
+              <span className="font-mono text-xs text-muted">{p.rating}</span>
+              {p.status === "friends" ? (
+                <span className="w-24 text-right text-sm text-[#5CF2C2]">✓ Friends</span>
+              ) : p.status === "outgoing" ? (
+                <span className="w-24 text-right text-sm text-muted">Requested</span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => void act(p)}
+                  aria-label={
+                    p.status === "incoming"
+                      ? `Accept ${p.username}'s request`
+                      : `Add ${p.username} as a friend`
+                  }
+                  className={`h-9 w-24 cursor-pointer border bg-transparent font-display text-xs font-semibold tracking-widest uppercase disabled:opacity-50 ${
+                    p.status === "incoming"
+                      ? "border-rival text-rival hover:bg-rival/10"
+                      : "border-you text-you hover:bg-you/10"
+                  }`}
+                >
+                  {busy === p.userId ? "…" : p.status === "incoming" ? "Accept" : "+ Add"}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {actionError ? (
+        <p role="alert" className="m-0 text-sm text-rival">
+          {actionError}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /** /friends — add friends, answer requests, see who's online and challenge them. */
 export function FriendsPage() {
   const { api } = useServices();
@@ -273,6 +415,14 @@ export function FriendsPage() {
             Send request
           </Button>
         </div>
+        <PlayerSuggestions
+          query={username}
+          onChanged={(text) => {
+            setAddMessage({ tone: "good", text });
+            void load();
+            void refreshNotifications();
+          }}
+        />
         {addMessage ? (
           <p
             role={addMessage.tone === "bad" ? "alert" : "status"}

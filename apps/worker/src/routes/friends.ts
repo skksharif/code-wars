@@ -90,6 +90,21 @@ export function registerFriendRoutes(app: Hono<AppContext>): void {
     });
   });
 
+  // Suggestions while typing a username: 3 or more letters, at most 8 players.
+  app.get("/api/players/search", async (c) => {
+    const query = z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9_]{3,20}$/)
+      .safeParse(c.req.query("q") ?? "");
+    if (!query.success) throw new ApiError("INVALID_INPUT", "Type 3 to 20 letters, digits or _.");
+    const rows = await c.get("db").rpc<(PlayerRow & { status: string })[]>("search_players", {
+      p_user: c.get("userId"),
+      p_query: query.data,
+    });
+    return c.json({ players: rows.map((p) => ({ ...player(p), status: p.status })) });
+  });
+
   app.get("/api/friends/status/:username", async (c) => {
     const username = usernameSchema.safeParse(c.req.param("username"));
     if (!username.success) throw new ApiError("PLAYER_NOT_FOUND");

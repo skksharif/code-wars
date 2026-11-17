@@ -154,6 +154,10 @@ export interface FriendList {
 
 export type FriendStatusKind = "none" | "outgoing" | "incoming" | "friends" | "self";
 
+export interface FoundPlayer extends RoomPlayer {
+  status: Exclude<FriendStatusKind, "self">;
+}
+
 export interface FriendStatus {
   userId: string;
   status: FriendStatusKind;
@@ -185,6 +189,8 @@ export interface Notifications {
 
 export interface ApiClient {
   getFriends(): Promise<FriendList>;
+  /** Up to 8 players whose username contains `query` (3+ letters), with how you stand with each. */
+  searchPlayers(query: string): Promise<FoundPlayer[]>;
   getFriendStatus(username: string): Promise<FriendStatus>;
   sendFriendRequest(username: string): Promise<{ status: FriendStatusKind; userId: string }>;
   respondFriendRequest(
@@ -275,6 +281,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   return {
     getFriends: () => request("GET", "/api/friends"),
+    searchPlayers: async (query) =>
+      (
+        await request<{ players: FoundPlayer[] }>(
+          "GET",
+          `/api/players/search?q=${encodeURIComponent(query)}`,
+        )
+      ).players,
     getFriendStatus: (username) =>
       request("GET", `/api/friends/status/${encodeURIComponent(username)}`),
     sendFriendRequest: (username) => request("POST", "/api/friends/request", { username }),

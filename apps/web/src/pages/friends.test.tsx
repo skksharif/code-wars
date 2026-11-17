@@ -163,6 +163,90 @@ describe("the Friends page", () => {
   });
 });
 
+describe("username suggestions", () => {
+  const found = [
+    { userId: "user-5", username: "sharma", avatar: "echo", rating: 1300, status: "none" as const },
+    {
+      userId: "user-6",
+      username: "shark_bite",
+      avatar: "kernel",
+      rating: 1250,
+      status: "incoming" as const,
+    },
+    {
+      userId: "user-7",
+      username: "sharky",
+      avatar: "pixel",
+      rating: 1100,
+      status: "outgoing" as const,
+    },
+    {
+      userId: "user-8",
+      username: "ashar",
+      avatar: "vector",
+      rating: 1400,
+      status: "friends" as const,
+    },
+  ];
+
+  it("appear after 3 letters, once typing pauses", async () => {
+    services.api.searchPlayers.mockResolvedValue(found);
+    open("/friends");
+    const input = await screen.findByLabelText("Add a friend by username");
+    await userEvent.type(input, "sh");
+    expect(screen.getByText("Type 3 or more letters to see suggestions.")).toBeInTheDocument();
+    expect(services.api.searchPlayers).not.toHaveBeenCalled();
+
+    await userEvent.type(input, "a");
+    const list = await screen.findByRole("list", { name: "Suggestions" });
+    // One search for the pause, not one per key press.
+    expect(services.api.searchPlayers).toHaveBeenCalledTimes(1);
+    expect(services.api.searchPlayers).toHaveBeenCalledWith("sha");
+    expect(screen.getByText("4 players found")).toBeInTheDocument();
+
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("sharma1300");
+    expect(within(rows[0]!).getByRole("link", { name: "sharma" })).toHaveAttribute(
+      "href",
+      "/u/sharma",
+    );
+    expect(within(rows[0]!).getByRole("button", { name: "Add sharma as a friend" })).toBeEnabled();
+    expect(
+      within(rows[1]!).getByRole("button", { name: "Accept shark_bite's request" }),
+    ).toBeEnabled();
+    expect(rows[2]).toHaveTextContent("Requested");
+    expect(rows[3]).toHaveTextContent("✓ Friends");
+  });
+
+  it("adds a friend straight from a suggestion", async () => {
+    services.api.searchPlayers.mockResolvedValue(found);
+    open("/friends");
+    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "sha");
+    await userEvent.click(await screen.findByRole("button", { name: "Add sharma as a friend" }));
+    expect(services.api.sendFriendRequest).toHaveBeenCalledWith("sharma");
+    expect(await screen.findByText("Request sent to sharma.")).toBeInTheDocument();
+    // Searched again so the row now shows the new state.
+    await waitFor(() => expect(services.api.searchPlayers).toHaveBeenCalledTimes(2));
+  });
+
+  it("accepts a request from a player who already asked", async () => {
+    services.api.searchPlayers.mockResolvedValue(found);
+    open("/friends");
+    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "sha");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Accept shark_bite's request" }),
+    );
+    expect(services.api.respondFriendRequest).toHaveBeenCalledWith("user-6", true);
+    expect(await screen.findByText("You and shark_bite are now friends.")).toBeInTheDocument();
+  });
+
+  it("says when nobody matches", async () => {
+    open("/friends");
+    await userEvent.type(await screen.findByLabelText("Add a friend by username"), "zzz");
+    expect(await screen.findByText("No players match “zzz”.")).toBeInTheDocument();
+  });
+});
+
 describe("the bell", () => {
   it("counts friend requests and leads to the Friends page", async () => {
     services.notifications = { ...services.notifications, friendRequests: 2 };

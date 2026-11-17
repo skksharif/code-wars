@@ -141,6 +141,16 @@ describe("friends and challenges API", () => {
     expect((await call(ana, "GET", "/api/friends")).body.incoming).toEqual([]);
   });
 
+  it("suggests players while typing", async () => {
+    const found = await call(ana, "GET", "/api/players/search?q=BEN");
+    expect(found.body).toEqual({
+      players: [expect.objectContaining({ userId: ben, username: "ben_player", status: "none" })],
+    });
+    expect((await call(ana, "GET", "/api/players/search?q=be")).status).toBe(400);
+    expect((await call(ana, "GET", "/api/players/search?q=ben%25")).status).toBe(400);
+    expect((await call(null, "GET", "/api/players/search?q=ben")).status).toBe(401);
+  });
+
   it("requires sign-in", async () => {
     expect((await call(null, "GET", "/api/friends")).status).toBe(401);
     expect((await call(null, "GET", "/api/notifications")).status).toBe(401);

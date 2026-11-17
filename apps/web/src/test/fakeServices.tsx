@@ -199,6 +199,7 @@ export function createFakeServices(): FakeServices {
     profiles: {},
     api: {
       getFriends: vi.fn<ApiClient["getFriends"]>(async () => services.friendList),
+      searchPlayers: vi.fn<ApiClient["searchPlayers"]>(async () => []),
       getFriendStatus: vi.fn<ApiClient["getFriendStatus"]>(async () => ({
         userId: "user-9",
         status: "none",
