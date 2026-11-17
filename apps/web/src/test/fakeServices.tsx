@@ -158,6 +158,8 @@ export interface FakeServices extends Services {
   api: { [K in keyof ApiClient]: ReturnType<typeof vi.fn<ApiClient[K]>> };
   /** Handlers registered by the battle page, to simulate live events. */
   watchers: BattleWatchHandlers[];
+  /** Emote ids this player has sent over the battle channel. */
+  sentEmotes: string[];
   /** Who is in the site-wide lobby, and how to tell them the online count. */
   lobby: { userId: string; onMembers: (userIds: string[]) => void }[];
   /** Result screens watching their rematch offer. */
@@ -180,9 +182,11 @@ export function createFakeServices(): FakeServices {
   const roomWatchers: (() => void)[] = [];
   const notificationWatchers: (() => void)[] = [];
   const rematchWatchers: (() => void)[] = [];
+  const sentEmotes: string[] = [];
   const services: FakeServices = {
     rematchWatchers,
     watchers,
+    sentEmotes,
     lobby,
     roomWatchers,
     notificationWatchers,
@@ -294,8 +298,13 @@ export function createFakeServices(): FakeServices {
     live: {
       watchBattle: (_battleId, _userId, handlers) => {
         watchers.push(handlers);
-        return () => {
-          watchers.splice(watchers.indexOf(handlers), 1);
+        return {
+          stop: () => {
+            watchers.splice(watchers.indexOf(handlers), 1);
+          },
+          sendEmote: (emoteId) => {
+            sentEmotes.push(emoteId);
+          },
         };
       },
       watchRematch: (_battleId, onChange) => {

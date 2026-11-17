@@ -2,6 +2,8 @@ import { LANGUAGE_LABELS } from "@code-wars/shared";
 import type { BattlePlayer } from "../lib/api";
 import { formatClock, type BattlePhase } from "./useBattle";
 import { Avatar } from "../components/Avatar";
+import { EmoteBubble } from "./Emotes";
+import type { Emote } from "./emoteList";
 
 function Segments({
   player,
@@ -48,7 +50,12 @@ export function VersusBar({
   remainingMs,
   rivalOnline,
   overtime = false,
+  yourEmote = null,
+  rivalEmote = null,
 }: {
+  /** Quick emote bubbles shown under each name. */
+  yourEmote?: Emote | null;
+  rivalEmote?: Emote | null;
   you: BattlePlayer;
   rival: BattlePlayer;
   totalTests: number;
@@ -123,6 +130,13 @@ export function VersusBar({
           <span className="text-right font-mono text-[11px] text-muted md:hidden">offline</span>
         ) : null}
       </div>
+      <EmoteBubble emote={yourEmote} side="you" who="You" className="top-full left-3 mt-1.5" />
+      <EmoteBubble
+        emote={rivalEmote}
+        side="rival"
+        who={rival.username}
+        className="top-full right-3 mt-1.5"
+      />
     </header>
   );
 }

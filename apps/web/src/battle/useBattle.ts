@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, type BattleState } from "../lib/api";
+import type { BattleConnection } from "../lib/live";
+import { EMOTE_MIN_GAP_MS, emoteById, type Emote } from "./emoteList";
 import { useServices } from "../services";
 
 export type BattlePhase = "loading" | "ready" | "active" | "expired" | "finished";
@@ -21,6 +23,15 @@ export interface BattleView {
   /** Ids of connected players, or null if presence is unavailable. */
   onlineUserIds: string[] | null;
   refresh: () => Promise<void>;
+  /** The latest emote from the opponent (seq changes even when the same one is sent again). */
+  incomingEmote: IncomingEmote | null;
+  /** Sends a quick emote to the opponent. */
+  sendEmote: (emoteId: string) => void;
+}
+
+export interface IncomingEmote {
+  emote: Emote;
+  seq: number;
 }
 
 /**
@@ -39,6 +50,12 @@ export function useBattle(battleId: string, userId: string): BattleView {
   const stateRef = useRef<BattleState | null>(null);
   const offsetRef = useRef(0);
   const lastAutoActionRef = useRef(0);
+  const connectionRef = useRef<BattleConnection | null>(null);
+  const lastEmoteAtRef = useRef(-Infinity);
+  const [incomingEmote, setIncomingEmote] = useState<IncomingEmote | null>(null);
+  const sendEmote = useCallback((emoteId: string) => {
+    connectionRef.current?.sendEmote(emoteId);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -70,10 +87,18 @@ export function useBattle(battleId: string, userId: string): BattleView {
     const poll = setInterval(() => {
       if (isLive()) void refresh();
     }, timing.pollMs);
-    const stopWatching = live.watchBattle(battleId, userId, {
+    const connection = live.watchBattle(battleId, userId, {
       onChange: () => void refresh(),
       onPresence: setOnlineUserIds,
+      onEmote: (id) => {
+        // Only ids from the fixed list, and not faster than the sender is allowed.
+        const emote = emoteById(id);
+        if (!emote || Date.now() - lastEmoteAtRef.current < EMOTE_MIN_GAP_MS) return;
+        lastEmoteAtRef.current = Date.now();
+        setIncomingEmote((prev) => ({ emote, seq: (prev?.seq ?? 0) + 1 }));
+      },
     });
+    connectionRef.current = connection;
 
     const tick = setInterval(() => {
       setNow(Date.now());
@@ -98,7 +123,8 @@ export function useBattle(battleId: string, userId: string): BattleView {
     return () => {
       clearInterval(poll);
       clearInterval(tick);
-      stopWatching();
+      connectionRef.current = null;
+      connection.stop();
     };
   }, [api, live, timing, battleId, userId, refresh]);
 
@@ -127,7 +153,18 @@ export function useBattle(battleId: string, userId: string): BattleView {
     }
   }
 
-  return { state, error, phase, remainingMs, overtime, overtimeLeftMs, onlineUserIds, refresh };
+  return {
+    state,
+    error,
+    phase,
+    remainingMs,
+    overtime,
+    overtimeLeftMs,
+    onlineUserIds,
+    refresh,
+    incomingEmote,
+    sendEmote,
+  };
 }
 
 /** When the battle's clock runs out: the end of overtime, if there is one. */

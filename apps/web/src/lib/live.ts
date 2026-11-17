@@ -6,11 +6,20 @@ export interface BattleWatchHandlers {
   onChange: () => void;
   /** Ids of the players currently connected to the battle. */
   onPresence: (onlineUserIds: string[]) => void;
+  /** The opponent sent a quick emote (an id; check it against the emote list). */
+  onEmote?: (emoteId: unknown) => void;
+}
+
+/** A live connection to a battle. */
+export interface BattleConnection {
+  stop: () => void;
+  /** Sends a quick emote id to the other player (best effort, never stored). */
+  sendEmote: (emoteId: string) => void;
 }
 
 /** Live updates for a battle. Only a hint to refetch: never a source of truth. */
 export interface LiveService {
-  watchBattle(battleId: string, userId: string, handlers: BattleWatchHandlers): () => void;
+  watchBattle(battleId: string, userId: string, handlers: BattleWatchHandlers): BattleConnection;
   /**
    * Join the site-wide lobby as `userId` and report which players are
    * connected (user ids, each player once however many tabs). Returns a
@@ -129,13 +138,25 @@ export function createSupabaseLive(supabase: SupabaseClient): LiveService {
         .on("presence", { event: "sync" }, () => {
           handlers.onPresence(Object.keys(presence.presenceState()));
         })
+        // Quick emotes ride on the same private channel: only the two players
+        // can join it, and nothing sent here is stored.
+        .on("broadcast", { event: "emote" }, ({ payload }) => {
+          handlers.onEmote?.((payload as { id?: unknown } | undefined)?.id);
+        })
         .subscribe((status) => {
           if (status === "SUBSCRIBED") void presence.track({ online: true });
         });
 
-      return () => {
-        void supabase.removeChannel(changes);
-        void supabase.removeChannel(presence);
+      return {
+        stop: () => {
+          void supabase.removeChannel(changes);
+          void supabase.removeChannel(presence);
+        },
+        sendEmote: (emoteId) => {
+          void presence
+            .send({ type: "broadcast", event: "emote", payload: { id: emoteId } })
+            .catch(() => undefined);
+        },
       };
     },
 

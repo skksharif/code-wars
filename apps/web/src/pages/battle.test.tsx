@@ -720,3 +720,89 @@ describe("half of a loss", () => {
     expect(halfLoss(0)).toBe(0);
   });
 });
+
+describe("quick emotes", () => {
+  const openBattle = () => open(`/battle/${BATTLE_ID}`);
+  afterEach(() => vi.useRealTimers());
+
+  it("sends an emote from the tray and shows it over your name", async () => {
+    openBattle();
+    await screen.findByRole("timer");
+    await userEvent.click(screen.getByRole("button", { name: "Emotes" }));
+    const tray = screen.getByRole("group", { name: "Quick emotes" });
+    // One list: friendly, taunts and emojis together.
+    for (const name of ["GG", "Too slow 🐢", "Hello World is your peak", "🤡", "🫵😂"]) {
+      expect(within(tray).getByRole("button", { name })).toBeInTheDocument();
+    }
+    expect(within(tray).getAllByRole("button")).toHaveLength(43 + 1); // + Mute
+    await userEvent.click(within(tray).getByRole("button", { name: "Too slow 🐢" }));
+
+    expect(services.sentEmotes).toEqual(["too-slow"]);
+    expect(screen.queryByRole("group", { name: "Quick emotes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent("You: Too slow 🐢");
+
+    // One every 5 seconds: the tray's choices wait.
+    await userEvent.click(screen.getByRole("button", { name: "Emotes" }));
+    expect(screen.getByRole("button", { name: "GG" })).toBeDisabled();
+    expect(screen.getByText("Wait a moment…")).toBeInTheDocument();
+  });
+
+  it("shows the opponent's emote, ignores anything not on the list, and can mute", async () => {
+    openBattle();
+    await screen.findByRole("timer");
+    act(() => services.watchers[0]!.onEmote?.("<b>free text</b>"));
+    expect(screen.queryByText(/free text/)).not.toBeInTheDocument();
+
+    act(() => services.watchers[0]!.onEmote?.("skill-issue"));
+    expect(await screen.findByText("Skill issue")).toBeInTheDocument();
+    expect(screen.getByText("Skill issue").closest("[role=status]")).toHaveTextContent(
+      "byte_rival: Skill issue",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Emotes" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mute byte_rival" }));
+    expect(screen.queryByText(/byte_rival:/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unmute byte_rival" })).toBeInTheDocument();
+  });
+
+  it("drops emotes that arrive faster than the limit, and hides bubbles after 3 seconds", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    openBattle();
+    await screen.findByRole("timer");
+    act(() => services.watchers[0]!.onEmote?.("bot"));
+    act(() => services.watchers[0]!.onEmote?.("clown"));
+    expect(screen.getByText("Bot.")).toBeInTheDocument();
+    expect(screen.queryByText("Clown 🤡")).not.toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(3100));
+    expect(screen.queryByText("Bot.")).not.toBeInTheDocument();
+  });
+
+  it("sends the first 8 with Alt + 1…8", async () => {
+    openBattle();
+    await screen.findByRole("timer");
+    await userEvent.keyboard("{Alt>}3{/Alt}");
+    expect(services.sentEmotes).toEqual(["nice"]);
+    expect(screen.getByText("Nice!")).toBeInTheDocument();
+  });
+
+  it("offers quick picks on the result screen", async () => {
+    services.api.getBattle.mockResolvedValue(
+      finishedState(
+        { result: "win", ratingAfter: 1216 },
+        { result: "loss", ratingAfter: 1184 },
+        {
+          finishReason: "solved",
+          winnerId: "user-1",
+        },
+      ),
+    );
+    openBattle();
+    const say = await screen.findByRole("region", { name: "Say something" });
+    await userEvent.click(within(say).getByRole("button", { name: "GG EZ 😏" }));
+    expect(services.sentEmotes).toEqual(["gg-ez"]);
+
+    act(() => services.watchers[0]!.onEmote?.("lucky"));
+    expect(await screen.findByText("Lucky problem 🧂")).toBeInTheDocument();
+  });
+});

@@ -49,3 +49,33 @@ body {
   outline: 2px solid var(--color-you);
   outline-offset: 2px;
 }
+
+/* Quick emote bubbles pop in, then fade out after their 3 seconds. */
+@keyframes emote-pop {
+  /* Starts visible: if animations are paused, the bubble still shows. */
+  0% {
+    opacity: 1;
+    transform: translateY(-4px) scale(0.85);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+  }
+  18% {
+    transform: scale(1);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.emote-pop {
+  animation: emote-pop 3s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .emote-pop {
+    animation: none;
+  }
+}

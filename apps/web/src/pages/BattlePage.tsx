@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { EditorPanel } from "../battle/EditorPanel";
+import { EmotePicker, useEmotes } from "../battle/Emotes";
 import { ProblemPanel } from "../battle/ProblemPanel";
 import { OvertimeOffer } from "../battle/OvertimeOffer";
 import { ResultView } from "../battle/ResultView";
@@ -33,6 +34,7 @@ function BattleRoom({ id }: { id: string }) {
   const { user, refreshProfile } = useAuth();
   const { api } = useServices();
   const battle = useBattle(id, user!.id);
+  const emotes = useEmotes(battle.incomingEmote, battle.sendEmote);
   const [confirmingForfeit, setConfirmingForfeit] = useState(false);
   const [forfeitError, setForfeitError] = useState<string | null>(null);
   // Below the large breakpoint the problem and the editor do not fit side by
@@ -80,6 +82,7 @@ function BattleRoom({ id }: { id: string }) {
         state={state}
         overtimeLeftMs={battle.overtimeLeftMs}
         rivalHere={battle.onlineUserIds ? battle.onlineUserIds.includes(rival.userId) : null}
+        emotes={emotes}
       />
     );
   }
@@ -120,6 +123,8 @@ function BattleRoom({ id }: { id: string }) {
         remainingMs={battle.remainingMs}
         rivalOnline={battle.onlineUserIds ? battle.onlineUserIds.includes(rival.userId) : null}
         overtime={battle.overtime}
+        yourEmote={emotes.mine}
+        rivalEmote={emotes.theirs}
       />
 
       {battle.overtime && battle.phase === "active" ? (
@@ -141,7 +146,7 @@ function BattleRoom({ id }: { id: string }) {
         />
       ) : null}
 
-      <div className="flex min-h-12 flex-wrap items-center justify-end gap-2 border-b border-line bg-panel-deep px-3 py-1.5 md:gap-3 md:px-6">
+      <div className="relative flex min-h-12 flex-wrap items-center justify-end gap-2 border-b border-line bg-panel-deep px-3 py-1.5 md:gap-3 md:px-6">
         {battle.phase !== "ready" && state.problem && !confirmingForfeit ? (
           <div role="tablist" aria-label="Show" className="mr-auto flex lg:hidden">
             {(["problem", "code"] as const).map((key) => (
@@ -182,9 +187,16 @@ function BattleRoom({ id }: { id: string }) {
             </Button>
           </>
         ) : (
-          <Button variant="ghost" className="h-11 px-4" onClick={() => setConfirmingForfeit(true)}>
-            {battle.overtime ? "Give up" : "Forfeit"}
-          </Button>
+          <>
+            <EmotePicker view={emotes} rival={rival.username} />
+            <Button
+              variant="ghost"
+              className="h-11 px-4"
+              onClick={() => setConfirmingForfeit(true)}
+            >
+              {battle.overtime ? "Give up" : "Forfeit"}
+            </Button>
+          </>
         )}
       </div>
 
