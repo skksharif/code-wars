@@ -25,6 +25,11 @@ function Message({ title, children }: { title: string; children?: React.ReactNod
 
 export function BattlePage() {
   const { id = "" } = useParams();
+  // A new battle id (for example a rematch) starts the room afresh.
+  return <BattleRoom key={id} id={id} />;
+}
+
+function BattleRoom({ id }: { id: string }) {
   const { user, refreshProfile } = useAuth();
   const { api } = useServices();
   const battle = useBattle(id, user!.id);
@@ -67,10 +72,17 @@ export function BattlePage() {
   }
 
   const { state } = battle;
-  if (finished) return <ResultView state={state} overtimeLeftMs={battle.overtimeLeftMs} />;
-
   const you = state.players.find((p) => p.isYou)!;
   const rival = state.players.find((p) => !p.isYou)!;
+  if (finished) {
+    return (
+      <ResultView
+        state={state}
+        overtimeLeftMs={battle.overtimeLeftMs}
+        rivalHere={battle.onlineUserIds ? battle.onlineUserIds.includes(rival.userId) : null}
+      />
+    );
+  }
 
   // Giving up in overtime: the player chose it on the offer, so no second question.
   async function giveUp() {
@@ -178,9 +190,16 @@ export function BattlePage() {
 
       {battle.phase === "ready" || !state.problem ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center md:p-10">
-          <p className="m-0 font-mono text-sm tracking-[0.2em] text-rival uppercase">
-            Opponent found
-          </p>
+          {state.battle.rematchOf ? (
+            <p className="m-0 border border-rival px-3 py-1 font-mono text-sm tracking-[0.2em] text-rival uppercase">
+              Rematch · game{" "}
+              {state.battle.series.you + state.battle.series.them + state.battle.series.draws + 1}
+            </p>
+          ) : (
+            <p className="m-0 font-mono text-sm tracking-[0.2em] text-rival uppercase">
+              Opponent found
+            </p>
+          )}
           <h1 className="m-0 font-display text-3xl font-bold break-words uppercase italic md:text-5xl">
             {you.username} <span className="text-muted">vs</span>{" "}
             <span className="text-rival">{rival.username}</span>
@@ -188,6 +207,19 @@ export function BattlePage() {
           <p className="text-glow-you m-0 font-display text-7xl font-bold text-you md:text-8xl">
             {formatClock(battle.remainingMs)}
           </p>
+          {state.battle.rematchOf ? (
+            <p
+              className="m-0 flex flex-col items-center border border-line bg-panel px-6 py-2"
+              aria-label={`Series tonight: you ${state.battle.series.you}, ${rival.username} ${state.battle.series.them}`}
+            >
+              <span className="text-xs tracking-[0.14em] text-muted uppercase">Series tonight</span>
+              <span className="font-display text-3xl font-bold">
+                <span className="text-you">{state.battle.series.you}</span>{" "}
+                <span className="text-muted">–</span>{" "}
+                <span className="text-rival">{state.battle.series.them}</span>
+              </span>
+            </p>
+          ) : null}
           <p className="m-0 text-soft">Get ready. The problem appears when the countdown ends.</p>
         </div>
       ) : (

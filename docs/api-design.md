@@ -38,6 +38,13 @@ Base path `/api`. Every route except `/api/health` requires `Authorization: Bear
 | POST | `/challenges/:id/cancel` | — | Challenge | Challenger only |
 | GET | `/notifications` | — | `{ friendRequests, incomingChallenges, outgoingChallenge, serverTime }` | Bell and pop-ups |
 
+| GET | `/battles/:id/rematch` | — | Rematch | Battle players only |
+| POST | `/battles/:id/rematch` | — | Rematch | Ask; if the other player already asked, the rematch starts. `REMATCH_EXPIRED` (410, 60 s after the end), `REMATCH_DECLINED`, `OPPONENT_BUSY`, `ALREADY_IN_BATTLE` |
+| POST | `/battles/:id/rematch/respond` | `{ accept }` | Rematch (with `newBattleId` when accepted) | The other player's answer; `REMATCH_GONE`, `REMATCH_EXPIRED` |
+| POST | `/battles/:id/rematch/cancel` | — | Rematch | The asker takes it back (also on leaving the result screen) |
+
+Rematch: `{ status: none|pending|accepted|declined|expired|cancelled, requestedByYou, cancelReason: withdrawn|busy|null, newBattleId, windowEndsAt, rated, series: { you, them, draws }, serverTime }`. `GET /battles/:id` also returns `battle.rematchOf` and `battle.series`.
+
 Challenge: `{ id, status: pending|accepted|declined|expired|cancelled, cancelReason, difficulty, minutes, expiresAt, battleId, isChallenger, challenger, challenged, serverTime }`.
 
 Room: `{ id, code, status: open|started|closed|expired, difficulty, minutes, expiresAt, battleId, isHost, host, guest, serverTime }`, where host and guest are `{ userId, username, avatar, rating }`. `GET /battles/:id` also returns `battle.isRated` and `battle.roomCode`.

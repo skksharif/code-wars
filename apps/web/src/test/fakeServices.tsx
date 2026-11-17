@@ -10,6 +10,7 @@ import type {
   Challenge,
   FriendList,
   Notifications,
+  Rematch,
   Room,
 } from "../lib/api";
 import type {
@@ -63,6 +64,8 @@ export function battleState(overrides: Partial<BattleState> = {}): BattleState {
       overtimeEndsAt: null,
       overtimeOutcome: null,
       overtimeFullDelta: null,
+      rematchOf: null,
+      series: { you: 0, them: 0, draws: 0 },
     },
     players: [player(), player(RIVAL)],
     totalTests: 5,
@@ -111,6 +114,21 @@ export function room(overrides: Partial<Room> = {}): Room {
   };
 }
 
+/** No rematch asked yet, window open for 50 more seconds, unless overridden. */
+export function rematch(overrides: Partial<Rematch> = {}): Rematch {
+  return {
+    serverTime: iso(0),
+    status: "none",
+    requestedByYou: false,
+    cancelReason: null,
+    newBattleId: null,
+    windowEndsAt: iso(50_000),
+    rated: true,
+    series: { you: 1, them: 0, draws: 0 },
+    ...overrides,
+  };
+}
+
 /** A challenge from the test user (coder_42) to byte_rival, waiting, unless overridden. */
 export function challenge(overrides: Partial<Challenge> = {}): Challenge {
   return {
@@ -142,6 +160,8 @@ export interface FakeServices extends Services {
   watchers: BattleWatchHandlers[];
   /** Who is in the site-wide lobby, and how to tell them the online count. */
   lobby: { userId: string; onMembers: (userIds: string[]) => void }[];
+  /** Result screens watching their rematch offer. */
+  rematchWatchers: (() => void)[];
   /** App-wide watchers for friend requests and challenges. */
   notificationWatchers: (() => void)[];
   notifications: Notifications;
@@ -159,7 +179,9 @@ export function createFakeServices(): FakeServices {
   const lobby: FakeServices["lobby"] = [];
   const roomWatchers: (() => void)[] = [];
   const notificationWatchers: (() => void)[] = [];
+  const rematchWatchers: (() => void)[] = [];
   const services: FakeServices = {
+    rematchWatchers,
     watchers,
     lobby,
     roomWatchers,
@@ -229,7 +251,20 @@ export function createFakeServices(): FakeServices {
       startRoom: vi.fn<ApiClient["startRoom"]>(async () =>
         room({ status: "started", battleId: BATTLE_ID, guest: { ...ROOM_GUEST } }),
       ),
-      rematch: vi.fn<ApiClient["rematch"]>(async () => room({ guest: { ...ROOM_GUEST } })),
+      getRematch: vi.fn<ApiClient["getRematch"]>(async () => rematch()),
+      requestRematch: vi.fn<ApiClient["requestRematch"]>(async () =>
+        rematch({ status: "pending", requestedByYou: true }),
+      ),
+      respondRematch: vi.fn<ApiClient["respondRematch"]>(async (_id, accept) =>
+        rematch(
+          accept
+            ? { status: "accepted", newBattleId: "44444444-4444-4444-8444-444444444444" }
+            : { status: "declined" },
+        ),
+      ),
+      cancelRematch: vi.fn<ApiClient["cancelRematch"]>(async () =>
+        rematch({ status: "cancelled", cancelReason: "withdrawn", requestedByYou: true }),
+      ),
       joinMatchmaking: vi.fn<ApiClient["joinMatchmaking"]>(async () => ({
         status: "queued",
         waitedMs: 0,
@@ -259,6 +294,12 @@ export function createFakeServices(): FakeServices {
         watchers.push(handlers);
         return () => {
           watchers.splice(watchers.indexOf(handlers), 1);
+        };
+      },
+      watchRematch: (_battleId, onChange) => {
+        rematchWatchers.push(onChange);
+        return () => {
+          rematchWatchers.splice(rematchWatchers.indexOf(onChange), 1);
         };
       },
       watchRoom: (_roomId, onChange) => {

@@ -1,11 +1,12 @@
 import { LANGUAGE_LABELS } from "@code-wars/shared";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ApiError, type BattlePlayer, type BattleState, type Room } from "../lib/api";
+import { Link } from "react-router-dom";
+import type { BattlePlayer, BattleState } from "../lib/api";
 import type { FinalSubmission } from "../lib/live";
 import { useServices } from "../services";
 import { Avatar } from "../components/Avatar";
 import { formatClock } from "./useBattle";
+import { RematchBanner, useRematch, WhatNext } from "./WhatNext";
 
 /** What happened in the overtime after the first solve, if there was one. */
 function overtimeText(state: BattleState, you: BattlePlayer, rival: BattlePlayer): string {
@@ -126,96 +127,16 @@ function PlayerCard({
   );
 }
 
-/**
- * After a custom match: Rematch makes a new room with the same friend and
- * settings. If the friend presses it first, this player is put in their room,
- * so a quiet check shows an invitation to go there.
- */
-function Rematch({ battleId, rival }: { battleId: string; rival: string }) {
-  const { api, timing } = useServices();
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [invite, setInvite] = useState<Room | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    const check = () =>
-      api.getCurrentRoom().then(
-        (room) => active && setInvite(room && !room.isHost ? room : null),
-        () => undefined,
-      );
-    void check();
-    const poll = setInterval(() => void check(), Math.min(timing.pollMs, 4000));
-    return () => {
-      active = false;
-      clearInterval(poll);
-    };
-  }, [api, timing.pollMs]);
-
-  async function rematch() {
-    setBusy(true);
-    setError(null);
-    try {
-      const room = await api.rematch(battleId);
-      navigate(`/room/${room.id}`);
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Could not start a rematch.");
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-3">
-      {invite ? (
-        <p
-          role="status"
-          className="m-0 flex w-full max-w-xl flex-wrap items-center justify-between gap-3 border border-rival bg-rival/5 px-4 py-3"
-        >
-          <span>
-            <b>{invite.host.username}</b> wants a rematch.
-          </span>
-          <Link
-            to={`/room/${invite.id}`}
-            className="inline-flex h-11 items-center border border-rival px-4 font-display font-semibold tracking-widest text-rival uppercase no-underline hover:bg-rival/10"
-          >
-            Join room
-          </Link>
-        </p>
-      ) : null}
-      <div className="flex w-full max-w-xl flex-col gap-3 md:flex-row">
-        <button
-          type="button"
-          onClick={() => void rematch()}
-          disabled={busy}
-          aria-label={`Rematch ${rival}`}
-          className="cut glow-you inline-flex h-14 flex-1 cursor-pointer items-center justify-center border-0 bg-you px-8 font-display text-xl font-bold tracking-widest text-ground uppercase disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {busy ? "Opening room…" : "Rematch"}
-        </button>
-        <Link
-          to="/arena?mode=custom"
-          className="inline-flex h-14 flex-1 items-center justify-center border border-line-strong font-display text-lg font-semibold tracking-widest text-ink uppercase no-underline hover:border-muted"
-        >
-          Back to arena
-        </Link>
-      </div>
-      {error ? (
-        <p role="alert" className="m-0 text-rival">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
 export function ResultView({
   state,
   overtimeLeftMs = 0,
+  rivalHere = null,
 }: {
   state: BattleState;
   /** While the opponent is in overtime: how long they have left. */
   overtimeLeftMs?: number;
+  /** Whether the opponent is still on the battle page (null: unknown). */
+  rivalHere?: boolean | null;
 }) {
   const { data } = useServices();
   const you = state.players.find((p) => p.isYou)!;
@@ -237,6 +158,7 @@ export function ResultView({
   }, [data, state.battle.id, state.battle.status]);
 
   const inOvertime = state.battle.status === "active";
+  const rematch = useRematch(state.battle.id, !inOvertime);
 
   const headline = you.result === "win" ? "Victory" : you.result === "loss" ? "Defeat" : "Draw";
   const headlineStyle =
@@ -253,6 +175,7 @@ export function ResultView({
 
   return (
     <main className="flex flex-1 flex-col">
+      <RematchBanner view={rematch} rival={rival.username} />
       <section className="border-b border-line px-4 pt-7 pb-6 text-center md:px-[5%] md:pt-10 md:pb-7">
         <p className="m-0 font-mono text-xs tracking-[0.2em] text-muted uppercase">
           {rated
@@ -293,19 +216,18 @@ export function ResultView({
       </section>
 
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 md:w-[90%] md:px-0 md:py-8">
-        {rated ? (
-          <div className="flex flex-wrap justify-center gap-4">
+        {inOvertime ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="m-0 text-center text-muted">Rematch opens when the overtime ends.</p>
             <Link
-              to="/arena"
-              className="cut glow-you inline-flex h-14 items-center bg-you px-11 font-display text-xl font-bold tracking-widest text-ground uppercase no-underline"
+              to={rated ? "/arena" : "/arena?mode=custom"}
+              className="inline-flex h-12 items-center border border-line-strong px-6 font-display font-semibold tracking-widest text-ink uppercase no-underline hover:border-muted"
             >
-              Battle again
+              Find new battle
             </Link>
           </div>
-        ) : inOvertime ? (
-          <p className="m-0 text-center text-muted">Rematch opens when the overtime ends.</p>
         ) : (
-          <Rematch battleId={state.battle.id} rival={rival.username} />
+          <WhatNext view={rematch} rival={rival.username} rivalHere={rivalHere} rated={rated} />
         )}
 
         <section aria-label="Solutions" className="border border-line bg-panel">

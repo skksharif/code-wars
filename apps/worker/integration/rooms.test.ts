@@ -78,14 +78,19 @@ describe("custom rooms API", () => {
     expect(state.body.battle).toMatchObject({ isRated: false, roomCode: code });
 
     await call(host, "POST", `/api/battles/${battleId}/forfeit`);
-    const again = await call(guest, "POST", `/api/battles/${battleId}/rematch`);
-    expect(again.body).toMatchObject({
-      status: "open",
-      isHost: true,
-      difficulty: "easy",
-      minutes: 10,
-      guest: { username: "host_player" },
+    // Rematch: the guest asks, the host says yes, and an unrated battle starts.
+    const asked = await call(guest, "POST", `/api/battles/${battleId}/rematch`);
+    expect(asked.body).toMatchObject({ status: "pending", requestedByYou: true, rated: false });
+    expect((await call(host, "GET", `/api/battles/${battleId}/rematch`)).body).toMatchObject({
+      status: "pending",
+      requestedByYou: false,
     });
+    const yes = await call(host, "POST", `/api/battles/${battleId}/rematch/respond`, {
+      accept: true,
+    });
+    expect(yes.body.status).toBe("accepted");
+    const next = await call(guest, "GET", `/api/battles/${yes.body.newBattleId}`);
+    expect(next.body.battle).toMatchObject({ isRated: false, rematchOf: battleId });
   });
 
   it("explains problems with codes in plain words", async () => {

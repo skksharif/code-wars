@@ -19,6 +19,8 @@ export interface LiveService {
   joinLobby(userId: string, onMembers: (userIds: string[]) => void): () => void;
   /** Calls `onChange` when a friend request or challenge involving the player changes. */
   watchNotifications(userId: string, onChange: () => void): () => void;
+  /** Calls `onChange` when the rematch offer after a battle changes. */
+  watchRematch(battleId: string, onChange: () => void): () => void;
   /** Calls `onChange` when the room row changes (someone joined, left, or it started). */
   watchRoom(roomId: string, onChange: () => void): () => void;
 }
@@ -170,6 +172,20 @@ export function createSupabaseLive(supabase: SupabaseClient): LiveService {
         );
       }
       channel.subscribe();
+      return () => {
+        void supabase.removeChannel(channel);
+      };
+    },
+
+    watchRematch(battleId, onChange) {
+      const channel = supabase
+        .channel(`rematch:${battleId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "rematches", filter: `battle_id=eq.${battleId}` },
+          () => onChange(),
+        )
+        .subscribe();
       return () => {
         void supabase.removeChannel(channel);
       };

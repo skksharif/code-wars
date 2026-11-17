@@ -466,7 +466,7 @@ describe("result screen", () => {
     expect(screen.getByLabelText("Rating 1200 to 1216, change plus 16")).toBeInTheDocument();
     expect(screen.getByLabelText("Rating 1200 to 1184, change minus 16")).toBeInTheDocument();
     expect(screen.getByText("Python 3.12 · 2 attempts · 5 of 5 hidden tests")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Battle again" })).toHaveAttribute("href", "/arena");
+    expect(screen.getByRole("link", { name: "Find new battle" })).toHaveAttribute("href", "/arena");
     expect(screen.queryByLabelText("Code editor")).not.toBeInTheDocument();
   });
 
@@ -669,7 +669,9 @@ describe("overtime", () => {
     expect(banner).toHaveTextContent("Your win is safe.");
     expect(screen.getByText("In overtime")).toBeInTheDocument();
     expect(screen.getByLabelText("Rating 1200 to 1216, change plus 16")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Battle again" })).toBeInTheDocument();
+    // Rematch waits for the overtime; a new battle can be found straight away.
+    expect(screen.getByText("Rematch opens when the overtime ends.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Find new battle" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Code editor")).not.toBeInTheDocument();
   });
 

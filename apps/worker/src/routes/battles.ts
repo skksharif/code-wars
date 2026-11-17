@@ -3,7 +3,33 @@ import { z } from "zod";
 import type { AppContext } from "../app";
 import type { Db } from "../db";
 import { ApiError } from "../errors";
-import { toRoom, type RoomRow } from "./rooms";
+interface SeriesRow {
+  you: number;
+  them: number;
+  draws: number;
+}
+
+interface RematchRow {
+  server_time: string;
+  status: string;
+  requested_by_you: boolean | null;
+  cancel_reason: string | null;
+  new_battle_id: string | null;
+  window_ends_at: string;
+  rated: boolean;
+  series: SeriesRow;
+}
+
+const toRematch = (r: RematchRow) => ({
+  serverTime: r.server_time,
+  status: r.status,
+  requestedByYou: r.requested_by_you ?? false,
+  cancelReason: r.cancel_reason,
+  newBattleId: r.new_battle_id,
+  windowEndsAt: r.window_ends_at,
+  rated: r.rated,
+  series: r.series,
+});
 
 const uuidSchema = z.string().uuid();
 
@@ -29,6 +55,8 @@ interface BattleStateRow {
     overtime_ends_at: string | null;
     overtime_outcome: "solved" | "gave_up" | "timeout" | null;
     overtime_full_delta: number | null;
+    rematch_of: string | null;
+    series: SeriesRow;
   };
   players: {
     user_id: string;
@@ -80,6 +108,8 @@ export function registerBattleRoutes(app: Hono<AppContext>): void {
         overtimeEndsAt: state.battle.overtime_ends_at,
         overtimeOutcome: state.battle.overtime_outcome,
         overtimeFullDelta: state.battle.overtime_full_delta,
+        rematchOf: state.battle.rematch_of,
+        series: state.battle.series,
       },
       players: state.players.map((p) => ({
         userId: p.user_id,
@@ -107,14 +137,28 @@ export function registerBattleRoutes(app: Hono<AppContext>): void {
     });
   });
 
-  // After a custom match: a new room with the same friend and settings.
-  app.post("/api/battles/:id/rematch", async (c) => {
-    const room = await c.get("db").rpc<RoomRow>("rematch_room", {
-      p_user: c.get("userId"),
-      p_battle: battleId(c),
-    });
-    return c.json(toRoom(room));
+  // ---- rematch: either player asks; it starts when both want it -------------
+  const rematchCall = async (c: Context<AppContext>, fn: string, extra = {}) =>
+    toRematch(
+      await c.get("db").rpc<RematchRow>(fn, {
+        p_user: c.get("userId"),
+        p_battle: battleId(c),
+        ...extra,
+      }),
+    );
+
+  app.get("/api/battles/:id/rematch", async (c) => c.json(await rematchCall(c, "get_rematch")));
+  app.post("/api/battles/:id/rematch", async (c) =>
+    c.json(await rematchCall(c, "request_rematch")),
+  );
+  app.post("/api/battles/:id/rematch/respond", async (c) => {
+    const body = z.object({ accept: z.boolean() }).safeParse(await c.req.json().catch(() => null));
+    if (!body.success) throw new ApiError("INVALID_INPUT");
+    return c.json(await rematchCall(c, "respond_rematch", { p_accept: body.data.accept }));
   });
+  app.post("/api/battles/:id/rematch/cancel", async (c) =>
+    c.json(await rematchCall(c, "cancel_rematch")),
+  );
 
   app.post("/api/battles/:id/forfeit", async (c) => {
     await c.get("db").rpc("forfeit_battle", { p_user: c.get("userId"), p_battle: battleId(c) });

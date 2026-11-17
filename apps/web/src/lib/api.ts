@@ -53,6 +53,10 @@ export interface BattleState {
     overtimeOutcome: "solved" | "gave_up" | "timeout" | null;
     /** The overtime player's rating change if they do not solve it (negative; 0 when unrated). */
     overtimeFullDelta: number | null;
+    /** Set when this battle is a rematch of another. */
+    rematchOf: string | null;
+    /** Results between the two players in the last 24 hours (from your side). */
+    series: Series;
   };
   players: BattlePlayer[];
   totalTests: number;
@@ -103,6 +107,27 @@ export interface Room {
   isHost: boolean;
   host: RoomPlayer;
   guest: RoomPlayer | null;
+}
+
+export interface Series {
+  you: number;
+  them: number;
+  draws: number;
+}
+
+/** The rematch offer after a finished battle, as one of its players sees it. */
+export interface Rematch {
+  serverTime: string;
+  status: "none" | "pending" | "accepted" | "declined" | "expired" | "cancelled";
+  requestedByYou: boolean;
+  cancelReason: "withdrawn" | "busy" | null;
+  /** The rematch battle, once both said yes. */
+  newBattleId: string | null;
+  /** Rematch can be asked until 60 seconds after the battle ended. */
+  windowEndsAt: string;
+  /** Whether a rematch would count for rating. */
+  rated: boolean;
+  series: Series;
 }
 
 export interface HeadToHead {
@@ -182,7 +207,10 @@ export interface ApiClient {
   getRoom(roomId: string): Promise<Room>;
   leaveRoom(roomId: string): Promise<void>;
   startRoom(roomId: string): Promise<Room>;
-  rematch(battleId: string): Promise<Room>;
+  getRematch(battleId: string): Promise<Rematch>;
+  requestRematch(battleId: string): Promise<Rematch>;
+  respondRematch(battleId: string, accept: boolean): Promise<Rematch>;
+  cancelRematch(battleId: string): Promise<Rematch>;
   joinMatchmaking(): Promise<MatchmakingStatus>;
   cancelMatchmaking(): Promise<void>;
   getActiveBattle(): Promise<string | null>;
@@ -270,7 +298,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       await request("POST", `/api/rooms/${id}/leave`);
     },
     startRoom: (id) => request("POST", `/api/rooms/${id}/start`),
-    rematch: (id) => request("POST", `/api/battles/${id}/rematch`),
+    getRematch: (id) => request("GET", `/api/battles/${id}/rematch`),
+    requestRematch: (id) => request("POST", `/api/battles/${id}/rematch`),
+    respondRematch: (id, accept) =>
+      request("POST", `/api/battles/${id}/rematch/respond`, { accept }),
+    cancelRematch: (id) => request("POST", `/api/battles/${id}/rematch/cancel`),
     joinMatchmaking: () => request("POST", "/api/matchmaking/join"),
     cancelMatchmaking: async () => {
       await request("POST", "/api/matchmaking/cancel");

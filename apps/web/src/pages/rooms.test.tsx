@@ -9,6 +9,7 @@ import {
   BATTLE_ID,
   createFakeServices,
   finishedState,
+  rematch,
   renderWithApp,
   room,
   ROOM_GUEST,
@@ -272,30 +273,17 @@ describe("after a custom match", () => {
     expect(screen.queryByRole("link", { name: "Battle again" })).not.toBeInTheDocument();
   });
 
-  it("starts a rematch room", async () => {
+  it("offers the same mutual rematch as every battle, unrated", async () => {
     services.api.getBattle.mockResolvedValue(customWin());
-    services.api.getRoom.mockResolvedValue(room({ guest: { ...ROOM_GUEST } }));
+    services.api.getRematch.mockResolvedValue(rematch({ rated: false }));
     open(`/battle/${BATTLE_ID}`);
-    await userEvent.click(await screen.findByRole("button", { name: "Rematch byte_rival" }));
-    expect(services.api.rematch).toHaveBeenCalledWith(BATTLE_ID);
-    expect(await screen.findByRole("heading", { name: "Your room" })).toBeInTheDocument();
-  });
-
-  it("invites the player when the friend asked for a rematch first", async () => {
-    services.api.getBattle.mockResolvedValue(customWin());
-    services.api.getCurrentRoom.mockResolvedValue(
-      room({
-        isHost: false,
-        host: { ...ROOM_GUEST },
-        guest: { userId: "user-1", username: "coder_42", avatar: "nova", rating: 1216 },
-      }),
-    );
-    open(`/battle/${BATTLE_ID}`);
-    const invite = await screen.findByText(/wants a rematch/);
-    expect(invite.closest("p")).toHaveTextContent("byte_rival wants a rematch.");
-    expect(screen.getByRole("link", { name: "Join room" })).toHaveAttribute(
+    const next = await screen.findByRole("region", { name: "What next?" });
+    expect(await within(next).findByText(/unrated/)).toBeInTheDocument();
+    await userEvent.click(within(next).getByRole("button", { name: "Rematch byte_rival" }));
+    expect(services.api.requestRematch).toHaveBeenCalledWith(BATTLE_ID);
+    expect(within(next).getByRole("link", { name: "Find new battle" })).toHaveAttribute(
       "href",
-      `/room/${ROOM_ID}`,
+      "/arena?mode=custom",
     );
   });
 
@@ -309,7 +297,7 @@ describe("after a custom match", () => {
     );
     open(`/battle/${BATTLE_ID}`);
     expect(await screen.findByText("Battle over")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Battle again" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Find new battle" })).toHaveAttribute("href", "/arena");
     expect(screen.queryByText("RATING UNCHANGED")).not.toBeInTheDocument();
   });
 
