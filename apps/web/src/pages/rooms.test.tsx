@@ -37,6 +37,19 @@ const roomChanged = () =>
     for (const notify of services.roomWatchers) notify();
   });
 
+describe("reading a pasted code", () => {
+  it("accepts a bare code or an invite link, never ordinary text", async () => {
+    const { codeFromText } = await import("../rooms/parts");
+    expect(codeFromText("k7m2qx")).toBe("K7M2QX");
+    expect(codeFromText(" K7M-2QX ")).toBe("K7M2QX");
+    expect(codeFromText("Join my room: https://x.test/join/K7M2QX")).toBe("K7M2QX");
+    expect(codeFromText("https://x.test/join/k7m2qx?ref=1")).toBe("K7M2QX");
+    expect(codeFromText("hello there")).toBeNull();
+    expect(codeFromText("K7M2Q")).toBeNull();
+    expect(codeFromText("K7M2Q0")).toBeNull(); // 0 is never in a code
+  });
+});
+
 describe("arena: Ranked | Custom", () => {
   it("switches to the Custom tab, with create and join", async () => {
     open("/arena");
@@ -54,8 +67,41 @@ describe("arena: Ranked | Custom", () => {
     expect(await screen.findByRole("region", { name: "Create a room" })).toBeInTheDocument();
   });
 
-  it("creates a room with the chosen settings and opens it", async () => {
+  it("creates a room in one tap with the default settings", async () => {
+    open("/arena?mode=custom");
+    const create = await screen.findByRole("region", { name: "Create a room" });
+    expect(within(create).getByRole("button", { name: "Any difficulty" })).toBeInTheDocument();
+    expect(within(create).getByRole("button", { name: "15 min" })).toBeInTheDocument();
+    await userEvent.click(within(create).getByRole("button", { name: "Create room" }));
+    expect(services.api.createRoom).toHaveBeenCalledWith("any", 15);
+  });
+
+  it("on phones, changes a setting by tapping its chip", async () => {
     services.api.getRoom.mockResolvedValue(room({ difficulty: "hard", minutes: 30 }));
+    open("/arena?mode=custom");
+    const create = await screen.findByRole("region", { name: "Create a room" });
+    // Choices stay hidden until a chip is tapped.
+    expect(within(create).queryByRole("radio", { name: "Hard" })).not.toBeInTheDocument();
+    await userEvent.click(within(create).getByRole("button", { name: "Any difficulty" }));
+    await userEvent.click(within(create).getByRole("radio", { name: "Hard" }));
+    expect(within(create).queryByRole("radio", { name: "Hard" })).not.toBeInTheDocument();
+    await userEvent.click(within(create).getByRole("button", { name: "15 min" }));
+    await userEvent.click(within(create).getByRole("radio", { name: "30 min" }));
+    expect(within(create).getByRole("button", { name: "Hard" })).toBeInTheDocument();
+    await userEvent.click(within(create).getByRole("button", { name: "Create room" }));
+
+    expect(services.api.createRoom).toHaveBeenCalledWith("hard", 30);
+    expect(await screen.findByRole("heading", { name: "Your room" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Room code K 7 M 2 Q X")).toBeInTheDocument();
+    expect(screen.getAllByText(/Hard · 30 min/).length).toBeGreaterThan(0);
+  });
+
+  it("on a PC shows create and join side by side with all choices", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) =>
+        ({ matches: query === "(min-width: 1024px)", media: query }) as MediaQueryList,
+    );
     open("/arena?mode=custom");
     const create = await screen.findByRole("region", { name: "Create a room" });
     expect(within(create).getByRole("radio", { name: "Any" })).toHaveAttribute(
@@ -66,14 +112,44 @@ describe("arena: Ranked | Custom", () => {
       "aria-checked",
       "true",
     );
-    await userEvent.click(within(create).getByRole("radio", { name: "Hard" }));
-    await userEvent.click(within(create).getByRole("radio", { name: "30 min" }));
-    await userEvent.click(within(create).getByRole("button", { name: "Create room" }));
+    expect(screen.getByRole("form", { name: "Join with a code" })).toBeInTheDocument();
+  });
 
-    expect(services.api.createRoom).toHaveBeenCalledWith("hard", 30);
-    expect(await screen.findByRole("heading", { name: "Your room" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Room code K 7 M 2 Q X")).toBeInTheDocument();
-    expect(screen.getByText("Hard · 30 min")).toBeInTheDocument();
+  it("pastes a code or an invite link into the boxes", async () => {
+    const readText = vi.fn(async () => "Join me! https://codewars.example/join/k7m2qx");
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { readText } });
+    open("/arena?mode=custom");
+    const join = await screen.findByRole("form", { name: "Join with a code" });
+    await userEvent.click(within(join).getByRole("button", { name: "Paste" }));
+    expect(screen.getByLabelText("Room code")).toHaveValue("K7M2QX");
+    expect(within(join).getByRole("button", { name: "Join room" })).toBeEnabled();
+
+    readText.mockResolvedValue("hello there");
+    await userEvent.click(within(join).getByRole("button", { name: "Paste" }));
+    expect(await within(join).findByRole("alert")).toHaveTextContent(
+      "That doesn't look like a room code or invite link.",
+    );
+  });
+
+  it("sets up a recent room again in one tap", async () => {
+    services.api.getRecentRooms.mockResolvedValue([
+      {
+        opponent: { ...ROOM_GUEST },
+        difficulty: "easy",
+        minutes: 10,
+        playedAt: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+      },
+    ]);
+    open("/arena?mode=custom");
+    const recent = await screen.findByRole("region", { name: "Recent rooms" });
+    expect(recent).toHaveTextContent("with byte_rival · Easy · 10 min");
+    expect(recent).toHaveTextContent("2h ago");
+    await userEvent.click(
+      within(recent).getByRole("button", {
+        name: "New room like the one with byte_rival: Easy · 10 min",
+      }),
+    );
+    expect(services.api.createRoom).toHaveBeenCalledWith("easy", 10);
   });
 
   it("shows why a room could not be made", async () => {

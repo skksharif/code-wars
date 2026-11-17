@@ -174,7 +174,7 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
     <button
       type="button"
       onClick={() => void copy()}
-      className="flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border border-you bg-transparent px-2 font-display text-sm font-semibold tracking-[0.1em] text-you uppercase hover:bg-you/10"
+      className="flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border border-you bg-transparent px-1 font-display text-xs font-semibold tracking-[0.04em] whitespace-nowrap text-you uppercase hover:bg-you/10 md:px-2 md:text-sm md:tracking-[0.1em]"
     >
       <span aria-live="polite">
         {state === "done" ? "Copied!" : state === "failed" ? "Copy failed" : label}
@@ -202,6 +202,100 @@ export function ShareButton({ code }: { code: string }) {
     >
       Share invite
     </button>
+  );
+}
+
+/**
+ * A room code from pasted text: a bare code ("k7m2qx") or an invite link
+ * (".../join/K7M2QX"). Null if it does not contain one.
+ */
+export function codeFromText(text: string): string | null {
+  const fromLink = /\/join\/([A-Za-z0-9]{6})(?:[/?#\s]|$)/.exec(text)?.[1];
+  // A bare code must be exactly 6 characters (spaces and dashes aside), so
+  // ordinary text is never mistaken for one.
+  const bare = text.trim().replace(/[\s-]/g, "");
+  const candidate = fromLink ?? (/^[A-Za-z0-9]{6}$/.test(bare) ? bare : "");
+  const code = cleanRoomCode(candidate);
+  return code.length === ROOM_CODE_LENGTH ? code : null;
+}
+
+/**
+ * The code entry drawn as 6 boxes. Underneath it is one ordinary text box
+ * (invisible, covering the boxes), so typing, pasting, phone keyboards and
+ * screen readers all work as usual.
+ */
+export function CodeBoxesInput({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div className="relative">
+      <div aria-hidden="true" className="flex justify-center gap-1.5 md:gap-2">
+        {Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => {
+          const ch = value[i];
+          const current = focused && i === Math.min(value.length, ROOM_CODE_LENGTH - 1);
+          return (
+            <span
+              key={i}
+              className={`flex h-14 w-11 items-center justify-center border bg-panel-deep font-mono text-3xl md:h-16 md:w-12 ${
+                ch ? "border-you text-you" : "border-line-strong text-muted/40"
+              } ${current ? "shadow-[0_0_0_2px_rgba(34,230,255,0.35)]" : ""}`}
+            >
+              {ch ?? "•"}
+            </span>
+          );
+        })}
+      </div>
+      <input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(cleanRoomCode(e.target.value))}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        maxLength={ROOM_CODE_LENGTH + 4}
+        autoCapitalize="characters"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        inputMode="text"
+        className="absolute inset-0 h-full w-full cursor-text border-0 bg-transparent text-base text-transparent caret-transparent opacity-0"
+      />
+    </div>
+  );
+}
+
+/** Copy code · Copy link · Share (share only where the device has a share sheet). */
+export function ShareRow({ code }: { code: string }) {
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  return (
+    <div className={`grid w-full gap-2 ${canShare ? "grid-cols-3" : "grid-cols-2"}`}>
+      <CopyButton text={code} label="Copy code" />
+      <CopyButton text={joinLink(code)} label="Copy link" />
+      {canShare ? (
+        <button
+          type="button"
+          aria-label="Share invite"
+          onClick={() =>
+            void navigator
+              .share({
+                title: "Code Wars",
+                text: `Join my Code Wars room: ${code}`,
+                url: joinLink(code),
+              })
+              .catch(() => undefined)
+          }
+          className="flex h-11 min-w-0 cursor-pointer items-center justify-center border border-you bg-you/10 px-1 font-display text-xs font-semibold tracking-[0.04em] whitespace-nowrap text-you uppercase hover:bg-you/20 md:px-2 md:text-sm md:tracking-[0.1em]"
+        >
+          Share
+        </button>
+      ) : null}
+    </div>
   );
 }
 

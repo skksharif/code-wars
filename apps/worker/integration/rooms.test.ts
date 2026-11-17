@@ -143,6 +143,23 @@ describe("custom rooms API", () => {
     expect((await call(host, "GET", "/api/rooms/current")).body.room).toBeNull();
   });
 
+  it("lists recent rooms", async () => {
+    expect((await call(host, "GET", "/api/rooms/recent")).body).toEqual({ rooms: [] });
+    const room = (await call(host, "POST", "/api/rooms", { difficulty: "hard", minutes: 30 })).body;
+    await call(guest, "POST", "/api/rooms/join", { code: room.code });
+    await call(host, "POST", `/api/rooms/${room.id}/start`);
+    expect((await call(guest, "GET", "/api/rooms/recent")).body).toEqual({
+      rooms: [
+        {
+          opponent: expect.objectContaining({ username: "host_player" }),
+          difficulty: "hard",
+          minutes: 30,
+          playedAt: expect.any(String),
+        },
+      ],
+    });
+  });
+
   it("requires sign-in", async () => {
     expect(
       (await call(null, "POST", "/api/rooms", { difficulty: "any", minutes: 15 })).status,

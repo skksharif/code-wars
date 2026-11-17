@@ -3,16 +3,10 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { formatClock } from "../battle/useBattle";
 import { Avatar } from "../components/Avatar";
 import { Button } from "../components/ui";
-import { ApiError, type Room } from "../lib/api";
-import {
-  CopyButton,
-  joinLink,
-  PlayerRow,
-  RoomCodeDisplay,
-  settingsText,
-  ShareButton,
-  UnratedBadge,
-} from "../rooms/parts";
+import { ApiError, type Room, type RoomPlayer } from "../lib/api";
+import { tierFor } from "../lib/tiers";
+import { useMediaQuery } from "../lib/useMediaQuery";
+import { RoomCodeDisplay, settingsText, ShareRow, UnratedBadge } from "../rooms/parts";
 import { useServices } from "../services";
 
 type Load =
@@ -32,6 +26,50 @@ function Ended({ title, text }: { title: string; text: string }) {
   );
 }
 
+/** One side of the VS card: a player, or the empty seat waiting for a friend. */
+function Seat({
+  player,
+  tag,
+  side,
+}: {
+  player: RoomPlayer | null;
+  tag: string;
+  side: "you" | "rival";
+}) {
+  const edge =
+    side === "you" ? "shadow-[inset_0_-3px_0_#22E6FF]" : "shadow-[inset_0_-3px_0_#FF2E9A]";
+  if (!player) {
+    return (
+      <div className="flex min-w-0 flex-col items-center gap-1.5 px-2 py-5 text-center shadow-[inset_0_-3px_0_#3A4160] md:py-7">
+        <span
+          aria-hidden="true"
+          className="h-16 w-16 rounded-full border-2 border-dashed border-rival md:h-20 md:w-20"
+        />
+        <span className="font-display text-lg font-bold text-muted md:text-xl">Waiting…</span>
+        <span className="font-mono text-[11px] text-muted">share the code</span>
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`flex min-w-0 flex-col items-center gap-1.5 px-2 py-5 text-center md:py-7 ${edge}`}
+    >
+      <Avatar
+        id={player.avatar}
+        size={72}
+        frame={side === "you" ? "#22E6FF" : "#FF2E9A"}
+        decorative
+      />
+      <span className="max-w-full font-display text-lg font-bold break-all md:text-xl">
+        {player.username}
+      </span>
+      <span className="font-mono text-[11px] text-muted">
+        {tag} · {player.rating} · {tierFor(player.rating).name}
+      </span>
+    </div>
+  );
+}
+
 /** /room/:id — the waiting room for a custom match, for its host and guest. */
 export function RoomPage() {
   const { id = "" } = useParams();
@@ -42,6 +80,7 @@ export function RoomPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [clockOffset, setClockOffset] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const wide = useMediaQuery("(min-width: 1024px)");
 
   const refresh = useCallback(async () => {
     try {
@@ -114,6 +153,8 @@ export function RoomPage() {
   }
 
   const left = Math.max(0, Date.parse(r.expiresAt) - (now + clockOffset));
+  const me = r.isHost ? r.host : r.guest;
+  const them = r.isHost ? r.guest : r.host;
 
   async function start() {
     setBusy("start");
@@ -138,54 +179,8 @@ export function RoomPage() {
     navigate("/arena?mode=custom");
   }
 
-  return (
-    <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-5 md:py-10">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="m-0 font-display text-2xl font-bold md:text-3xl">
-          {r.isHost ? "Your room" : `${r.host.username}'s room`}
-        </h1>
-        <UnratedBadge />
-      </div>
-
-      {r.isHost ? (
-        <section
-          aria-label="Invite your friend"
-          className="flex flex-col items-center gap-3 border border-you bg-panel p-4"
-        >
-          <p className="m-0 text-xs tracking-[0.14em] text-muted uppercase">Room code</p>
-          <RoomCodeDisplay code={r.code} />
-          <div className="flex w-full gap-2">
-            <CopyButton text={r.code} label="Copy code" />
-            <CopyButton text={joinLink(r.code)} label="Copy link" />
-          </div>
-          <ShareButton code={r.code} />
-          <p className="m-0 text-center font-mono text-xs text-muted">
-            Expires in {formatClock(left)}
-          </p>
-        </section>
-      ) : null}
-
-      <section aria-label="Players" className="flex flex-col gap-3 border border-line bg-panel p-4">
-        <p className="m-0 flex justify-between text-xs tracking-[0.14em] text-muted uppercase">
-          <span>Players · {r.guest ? 2 : 1} / 2</span>
-          <span className="normal-case">{settingsText(r)}</span>
-        </p>
-        <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          <PlayerRow player={r.host} tag="HOST" side={r.isHost ? "you" : "rival"} />
-          {r.guest ? (
-            <PlayerRow player={r.guest} tag="JOINED" side={r.isHost ? "rival" : "you"} />
-          ) : (
-            <li className="flex items-center gap-3 text-muted">
-              <span
-                aria-hidden="true"
-                className="h-10 w-10 flex-none rounded-full border-2 border-dashed border-rival"
-              />
-              Waiting for your friend…
-            </li>
-          )}
-        </ul>
-      </section>
-
+  const actions = (
+    <div className="flex flex-col gap-2">
       {r.isHost ? (
         <>
           <Button
@@ -193,10 +188,16 @@ export function RoomPage() {
             disabled={!r.guest || busy !== null}
             onClick={() => void start()}
           >
-            {busy === "start" ? "Starting…" : "Start battle"}
+            {busy === "start" ? (
+              "Starting…"
+            ) : (
+              <>
+                <span aria-hidden="true">⚔&nbsp;</span>Start battle
+              </>
+            )}
           </Button>
           {!r.guest ? (
-            <p className="m-0 text-center text-sm text-muted">
+            <p className="m-0 text-center text-xs text-muted">
               Start unlocks when your friend joins.
             </p>
           ) : null}
@@ -204,25 +205,77 @@ export function RoomPage() {
       ) : (
         <p
           role="status"
-          className="m-0 flex items-center justify-center gap-3 border border-line bg-panel p-4 text-soft"
+          className="m-0 flex min-h-12 items-center justify-center gap-3 border border-line bg-panel px-3 text-soft"
         >
-          <Avatar id={r.host.avatar} size={28} decorative />
+          <Avatar id={r.host.avatar} size={26} decorative />
           Waiting for {r.host.username} to start…
         </p>
       )}
       {actionError ? (
-        <p role="alert" className="m-0 text-rival">
+        <p role="alert" className="m-0 text-center text-rival">
           {actionError}
         </p>
       ) : null}
-      <Button
-        variant="ghost"
-        className="w-full"
+      <button
+        type="button"
         disabled={busy !== null}
         onClick={() => void leave()}
+        className="h-10 cursor-pointer border border-line bg-transparent font-display text-xs font-semibold tracking-widest text-muted uppercase hover:text-ink disabled:opacity-50"
       >
         {r.isHost ? "Close room" : "Leave room"}
-      </Button>
+      </button>
+    </div>
+  );
+
+  return (
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 pt-5 pb-48 md:px-[5%] lg:pt-8 lg:pb-10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="m-0 font-display text-2xl font-bold md:text-4xl lg:italic">
+          {r.isHost ? "Your room" : `${r.host.username}'s room`}
+        </h1>
+        <span className="flex items-center gap-2 font-mono text-xs text-muted">
+          {settingsText(r)} <UnratedBadge />
+        </span>
+      </div>
+
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_1.15fr] lg:gap-6">
+        {r.isHost ? (
+          <section
+            aria-label="Invite your friend"
+            className="flex flex-col items-center gap-3 border border-you bg-panel p-4 lg:order-1 lg:p-6"
+          >
+            <p className="m-0 text-xs tracking-[0.14em] text-muted uppercase">Room code</p>
+            <RoomCodeDisplay code={r.code} />
+            <ShareRow code={r.code} />
+            <p className="m-0 text-center font-mono text-xs text-muted">
+              Expires in {formatClock(left)}
+            </p>
+          </section>
+        ) : null}
+
+        <div className={`flex flex-col gap-4 lg:order-2 ${r.isHost ? "" : "lg:col-span-2"}`}>
+          <section aria-label="Players" className="flex flex-col gap-2">
+            <p className="m-0 text-xs tracking-[0.14em] text-muted uppercase">
+              Players · {r.guest ? 2 : 1} / 2
+            </p>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center border border-line bg-panel">
+              <Seat player={me} tag={r.isHost ? "HOST" : "YOU"} side="you" />
+              <span className="px-1 font-display text-2xl font-bold italic md:text-4xl">VS</span>
+              <Seat player={them} tag={r.isHost ? "JOINED" : "HOST"} side="rival" />
+            </div>
+            {!r.guest ? <span className="sr-only">Waiting for your friend…</span> : null}
+          </section>
+          {/* Wide screens: the actions sit under the players. */}
+          {wide ? actions : null}
+        </div>
+      </div>
+
+      {/* Phones and tablets: pinned above the bottom bar, always in reach. */}
+      {wide ? null : (
+        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 border-t border-line bg-panel px-4 py-3 md:bottom-24 md:mx-auto md:max-w-xl md:border">
+          {actions}
+        </div>
+      )}
     </main>
   );
 }

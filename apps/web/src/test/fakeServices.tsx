@@ -237,6 +237,7 @@ export function createFakeServices(): FakeServices {
         room({ difficulty, minutes }),
       ),
       getCurrentRoom: vi.fn<ApiClient["getCurrentRoom"]>(async () => null),
+      getRecentRooms: vi.fn<ApiClient["getRecentRooms"]>(async () => []),
       getRoomByCode: vi.fn<ApiClient["getRoomByCode"]>(async (code) =>
         room({
           code,

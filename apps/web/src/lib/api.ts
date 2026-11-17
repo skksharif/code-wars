@@ -109,6 +109,13 @@ export interface Room {
   guest: RoomPlayer | null;
 }
 
+export interface RecentRoom {
+  opponent: RoomPlayer;
+  difficulty: RoomDifficulty;
+  minutes: RoomMinutes;
+  playedAt: string;
+}
+
 export interface Series {
   you: number;
   them: number;
@@ -208,6 +215,8 @@ export interface ApiClient {
   getNotifications(): Promise<Notifications>;
   createRoom(difficulty: RoomDifficulty, minutes: RoomMinutes): Promise<Room>;
   getCurrentRoom(): Promise<Room | null>;
+  /** Your last 3 played rooms (opponent and settings). */
+  getRecentRooms(): Promise<RecentRoom[]>;
   getRoomByCode(code: string): Promise<Room>;
   joinRoom(code: string): Promise<Room>;
   getRoom(roomId: string): Promise<Room>;
@@ -304,6 +313,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     createRoom: (difficulty, minutes) => request("POST", "/api/rooms", { difficulty, minutes }),
     getCurrentRoom: async () =>
       (await request<{ room: Room | null }>("GET", "/api/rooms/current")).room,
+    getRecentRooms: async () =>
+      (await request<{ rooms: RecentRoom[] }>("GET", "/api/rooms/recent")).rooms,
     getRoomByCode: (code) => request("GET", `/api/rooms/code/${encodeURIComponent(code)}`),
     joinRoom: (code) => request("POST", "/api/rooms/join", { code }),
     getRoom: (id) => request("GET", `/api/rooms/${id}`),

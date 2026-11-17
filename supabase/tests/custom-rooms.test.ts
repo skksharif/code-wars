@@ -423,6 +423,36 @@ describe("rematch", () => {
   });
 });
 
+describe("recent rooms", () => {
+  it("lists your last 3 played rooms with the opponent and settings", async () => {
+    const recent = async (user: string) =>
+      (
+        await one<{
+          r: {
+            opponent: { username: string };
+            difficulty: string;
+            duration_minutes: number;
+          }[];
+        }>(db, "select public.get_recent_rooms($1) as r", [user])
+      ).r;
+    expect(await recent(host)).toEqual([]);
+
+    await startedBattle(); // easy, 10 min, with guest_player
+    // An open room nobody joined does not count.
+    await createRoom(other, "hard", 30);
+    expect(await recent(host)).toEqual([
+      {
+        opponent: expect.objectContaining({ username: "guest_player" }),
+        difficulty: "easy",
+        duration_minutes: 10,
+        played_at: expect.any(String),
+      },
+    ]);
+    expect((await recent(guest))[0]!.opponent.username).toBe("host_player");
+    expect(await recent(other)).toEqual([]);
+  });
+});
+
 describe("expiry and access", () => {
   it("expires open rooms after 30 minutes, also from the scheduled sweep", async () => {
     const room = await createRoom(host);

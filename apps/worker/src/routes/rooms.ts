@@ -92,6 +92,26 @@ export function registerRoomRoutes(app: Hono<AppContext>): void {
     return c.json({ room: room ? toRoom(room) : null });
   });
 
+  // Your last 3 played rooms, to set the same room up again in one tap.
+  app.get("/api/rooms/recent", async (c) => {
+    const rows = await c.get("db").rpc<
+      {
+        opponent: RoomPlayerRow;
+        difficulty: string;
+        duration_minutes: number;
+        played_at: string;
+      }[]
+    >("get_recent_rooms", { p_user: c.get("userId") });
+    return c.json({
+      rooms: rows.map((r) => ({
+        opponent: player(r.opponent),
+        difficulty: r.difficulty,
+        minutes: r.duration_minutes,
+        playedAt: r.played_at,
+      })),
+    });
+  });
+
   // Before joining: who hosts the room and its settings.
   app.get("/api/rooms/code/:code", async (c) => {
     const code = codeSchema.safeParse(c.req.param("code"));
