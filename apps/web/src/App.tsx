@@ -1,4 +1,5 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
+import { lazyPage } from "./lib/lazyPage";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
@@ -10,21 +11,13 @@ import { LoginPage } from "./pages/LoginPage";
 // A first-time visitor lands on the landing or log-in page, so those two are
 // part of the first download. Every other page (the battle room with its
 // problem-statement renderer above all) downloads only when it is opened.
-const ArenaPage = lazy(() => import("./pages/ArenaPage").then((m) => ({ default: m.ArenaPage })));
-const BattlePage = lazy(() =>
-  import("./pages/BattlePage").then((m) => ({ default: m.BattlePage })),
-);
-const FriendsPage = lazy(() =>
-  import("./pages/FriendsPage").then((m) => ({ default: m.FriendsPage })),
-);
-const JoinPage = lazy(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
-const RoomPage = lazy(() => import("./pages/RoomPage").then((m) => ({ default: m.RoomPage })));
-const ProfilePage = lazy(() =>
-  import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
-);
-const RankingsPage = lazy(() =>
-  import("./pages/RankingsPage").then((m) => ({ default: m.RankingsPage })),
-);
+const ArenaPage = lazyPage(() => import("./pages/ArenaPage").then((m) => m.ArenaPage));
+const BattlePage = lazyPage(() => import("./pages/BattlePage").then((m) => m.BattlePage));
+const FriendsPage = lazyPage(() => import("./pages/FriendsPage").then((m) => m.FriendsPage));
+const JoinPage = lazyPage(() => import("./pages/JoinPage").then((m) => m.JoinPage));
+const RoomPage = lazyPage(() => import("./pages/RoomPage").then((m) => m.RoomPage));
+const ProfilePage = lazyPage(() => import("./pages/ProfilePage").then((m) => m.ProfilePage));
+const RankingsPage = lazyPage(() => import("./pages/RankingsPage").then((m) => m.RankingsPage));
 
 function PageLoading() {
   return (

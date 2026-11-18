@@ -510,6 +510,14 @@ describe("result screen", () => {
     expect(screen.getByText("// theirs")).toBeInTheDocument();
   });
 
+  it("roasts both players from the battle's stats", async () => {
+    services.api.getBattle.mockResolvedValue(won());
+    open(`/battle/${BATTLE_ID}`);
+    const roasts = await screen.findByRole("region", { name: "Battle roasts" });
+    expect(roasts).toHaveTextContent("So close");
+    expect(roasts).toHaveTextContent("4 of 5 tests. One away.");
+  });
+
   it("says so when a player never submitted", async () => {
     services.api.getBattle.mockResolvedValue(won());
     open(`/battle/${BATTLE_ID}`);
