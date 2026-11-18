@@ -1,7 +1,7 @@
 /**
- * The Blitz emblem: an angular team-style shield with two fast-forward
- * chevrons. Drawn in the current text colour; decorative (the word "Blitz"
- * always sits next to it).
+ * The Blitz mark: a sharp, angular lightning bolt (esports-logo style, not
+ * the emoji), with a cut-out inner edge for depth. Drawn in the current text
+ * colour; decorative (the word "Blitz" always sits next to it).
  */
 export function BlitzMark({ size = 16, className = "" }: { size?: number; className?: string }) {
   return (
@@ -12,20 +12,15 @@ export function BlitzMark({ size = 16, className = "" }: { size?: number; classN
       aria-hidden="true"
       className={`inline-block flex-none align-[-0.15em] ${className}`}
     >
+      {/* The bolt: hard angles, slanted forward. */}
+      <path d="M15.6 0.8 4.2 13.6h6.3L7.6 23.2 20.2 9.4h-6.4z" fill="currentColor" />
+      {/* A thin cut along the upper edge gives it a two-tone, logo-like finish. */}
       <path
-        d="M12 1.5 21 5.5v6.2c0 5-3.7 9.1-9 10.8-5.3-1.7-9-5.8-9-10.8V5.5z"
-        fill="currentColor"
-        fillOpacity="0.16"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="miter"
-      />
-      <path
-        d="M6.8 8 10.8 12l-4 4M12.4 8l4 4-4 4"
+        d="M14.2 3.6 7.4 11.6h3.1"
         fill="none"
-        stroke="currentColor"
-        strokeWidth="2.6"
-        strokeLinecap="square"
+        stroke="#05060A"
+        strokeOpacity="0.55"
+        strokeWidth="1.1"
         strokeLinejoin="miter"
       />
     </svg>
