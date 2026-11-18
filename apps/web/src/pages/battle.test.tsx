@@ -818,7 +818,7 @@ describe("quick emotes", () => {
 describe("blitz", () => {
   it("has its own tab with the Blitz rating, and searches the Blitz queue", async () => {
     open("/arena?mode=blitz");
-    expect(await screen.findByRole("tab", { name: "⚡ Blitz" })).toHaveAttribute(
+    expect(await screen.findByRole("tab", { name: "Blitz" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -844,7 +844,7 @@ describe("blitz", () => {
     state.battle.mode = "blitz";
     services.api.getBattle.mockResolvedValue(state);
     open(`/battle/${BATTLE_ID}`);
-    expect(await screen.findByText("⚡ Blitz ·")).toBeInTheDocument();
+    expect(await screen.findByText("Blitz ·")).toBeInTheDocument();
   });
 
   it("shows Blitz rating changes and offers the next Blitz", async () => {
@@ -856,9 +856,9 @@ describe("blitz", () => {
       ),
     );
     open(`/battle/${BATTLE_ID}`);
-    expect(await screen.findByText("⚡ Blitz · battle over")).toBeInTheDocument();
+    expect(await screen.findByText("Blitz · battle over")).toBeInTheDocument();
     expect(screen.getByLabelText("Blitz rating 1188 to 1204, change plus 16")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "⚡ Next Blitz" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Next Blitz" })).toHaveAttribute(
       "href",
       "/arena?mode=blitz",
     );

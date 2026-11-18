@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BlitzMark } from "../components/BlitzMark";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import type { GameMode } from "../lib/api";
@@ -84,7 +85,14 @@ export function RankingsPage() {
                   : "bg-you/15 text-you"
             }`}
           >
-            {key === "blitz" ? "⚡ Blitz" : "Ranked"}
+            {key === "blitz" ? (
+              <span className="inline-flex items-center gap-1.5">
+                <BlitzMark size={18} />
+                Blitz
+              </span>
+            ) : (
+              "Ranked"
+            )}
           </button>
         ))}
       </div>

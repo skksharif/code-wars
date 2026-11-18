@@ -1,4 +1,5 @@
 import { LANGUAGE_LABELS } from "@code-wars/shared";
+import { BlitzMark } from "../components/BlitzMark";
 import type { BattlePlayer } from "../lib/api";
 import { formatClock, type BattlePhase } from "./useBattle";
 import { Avatar } from "../components/Avatar";
@@ -116,7 +117,12 @@ export function VersusBar({
             blitz ? "text-gold" : "text-muted"
           }`}
         >
-          {blitz ? <span aria-hidden="true">⚡ Blitz · </span> : null}
+          {blitz ? (
+            <span aria-hidden="true" className="inline-flex items-center gap-1">
+              <BlitzMark size={12} />
+              Blitz ·{" "}
+            </span>
+          ) : null}
           {clockLabel}
         </span>
         <span className={`font-display text-3xl leading-none font-bold md:text-5xl ${clockColour}`}>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BlitzMark } from "../components/BlitzMark";
 import { Link, useNavigate } from "react-router-dom";
 import { FriendButton } from "../friends/FriendButton";
 import { ApiError, type Rematch } from "../lib/api";
@@ -259,7 +260,8 @@ export function WhatNext({
           to="/arena?mode=blitz"
           className="cut glow-gold inline-flex h-12 items-center justify-center bg-gold font-display font-bold tracking-widest text-ground uppercase no-underline hover:brightness-110"
         >
-          ⚡ Next Blitz
+          <BlitzMark size={20} className="mr-2" />
+          Next Blitz
         </Link>
       ) : (
         <Link

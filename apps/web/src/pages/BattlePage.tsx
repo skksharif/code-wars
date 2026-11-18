@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BlitzMark } from "../components/BlitzMark";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { EditorPanel } from "../battle/EditorPanel";
@@ -214,7 +215,13 @@ function BattleRoom({ id }: { id: string }) {
                 state.battle.mode === "blitz" ? "text-gold" : "text-rival"
               }`}
             >
-              {state.battle.mode === "blitz" ? "⚡ Blitz · opponent found" : "Opponent found"}
+              {state.battle.mode === "blitz" ? (
+                <>
+                  <BlitzMark size={18} /> Blitz · opponent found
+                </>
+              ) : (
+                "Opponent found"
+              )}
             </p>
           )}
           <h1 className="m-0 font-display text-3xl font-bold break-words uppercase italic md:text-5xl">

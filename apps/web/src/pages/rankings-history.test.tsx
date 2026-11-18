@@ -113,7 +113,7 @@ describe("blitz rankings", () => {
   it("switches between Ranked and Blitz rankings", async () => {
     services.leaderboard = LEADERBOARD;
     renderWithApp(createFakeAuth(), services, "/rankings");
-    const blitz = await screen.findByRole("tab", { name: "⚡ Blitz" });
+    const blitz = await screen.findByRole("tab", { name: "Blitz" });
     expect(screen.getByRole("tab", { name: "Ranked" })).toHaveAttribute("aria-selected", "true");
     await userEvent.click(blitz);
     expect(blitz).toHaveAttribute("aria-selected", "true");

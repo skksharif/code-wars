@@ -1,4 +1,5 @@
 import { LIMITS, matchWindow } from "@code-wars/shared";
+import { BlitzMark } from "../components/BlitzMark";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CustomPanel } from "../rooms/CustomPanel";
@@ -211,7 +212,7 @@ export function ArenaPage() {
               disabled={search.status === "checking"}
               onClick={start}
             >
-              {blitz ? "⚡ " : ""}
+              {blitz ? <BlitzMark size={28} className="mr-2" /> : null}
               {findLabel}
             </Button>
           )}
@@ -249,9 +250,14 @@ export function ArenaPage() {
 
 type ArenaMode = "ranked" | "blitz" | "custom";
 
-const MODE_LABELS: Record<ArenaMode, string> = {
+const MODE_LABELS: Record<ArenaMode, React.ReactNode> = {
   ranked: "Ranked",
-  blitz: "⚡ Blitz",
+  blitz: (
+    <span className="inline-flex items-center gap-1.5">
+      <BlitzMark size={20} />
+      Blitz
+    </span>
+  ),
   custom: "Custom",
 };
 
@@ -282,14 +288,6 @@ function ModeTabs({ mode, onChange }: { mode: ArenaMode; onChange: (mode: ArenaM
         </button>
       ))}
     </div>
-  );
-}
-
-function BoltIcon() {
-  return (
-    <svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M13.5 2 4.5 13.5h6.5L9.5 22 19.5 9.5H13z" fill="currentColor" />
-    </svg>
   );
 }
 
@@ -436,7 +434,7 @@ function PhoneArena({
               }`}
               style={{ clipPath: HEXAGON }}
             >
-              {blitz ? <BoltIcon /> : <BracketsIcon />}
+              {blitz ? <BlitzMark size={52} /> : <BracketsIcon />}
               <span className="text-center font-display text-3xl leading-[1.05] font-bold tracking-[0.1em] uppercase">
                 Find
                 <br />

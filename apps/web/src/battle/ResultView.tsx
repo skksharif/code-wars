@@ -1,4 +1,5 @@
 import { LANGUAGE_LABELS } from "@code-wars/shared";
+import { BlitzMark } from "../components/BlitzMark";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { BattlePlayer, BattleState } from "../lib/api";
@@ -187,11 +188,16 @@ export function ResultView({
       <RematchBanner view={rematch} rival={rival.username} />
       <section className="border-b border-line px-4 pt-7 pb-6 text-center md:px-[5%] md:pt-10 md:pb-7">
         <p className="m-0 font-mono text-xs tracking-[0.2em] text-muted uppercase">
-          {blitz
-            ? "⚡ Blitz · battle over"
-            : rated
-              ? "Battle over"
-              : `Custom match${state.battle.roomCode ? ` · ${state.battle.roomCode}` : ""}`}
+          {blitz ? (
+            <span className="inline-flex items-center gap-1.5 text-gold">
+              <BlitzMark size={16} />
+              Blitz · battle over
+            </span>
+          ) : rated ? (
+            "Battle over"
+          ) : (
+            `Custom match${state.battle.roomCode ? ` · ${state.battle.roomCode}` : ""}`
+          )}
         </p>
         <h1
           className={`mt-2 mb-0 font-display text-6xl leading-none font-bold tracking-wider uppercase italic sm:text-7xl md:text-9xl ${headlineStyle}`}
