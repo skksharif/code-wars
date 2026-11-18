@@ -50,6 +50,7 @@ interface BattleStateRow {
     winner_id: string | null;
     finish_reason: string | null;
     is_rated: boolean;
+    mode: "standard" | "blitz";
     room_code: string | null;
     first_solved_at: string | null;
     overtime_ends_at: string | null;
@@ -101,6 +102,7 @@ export function registerBattleRoutes(app: Hono<AppContext>): void {
         winnerId: state.battle.winner_id,
         finishReason: state.battle.finish_reason,
         isRated: state.battle.is_rated,
+        mode: state.battle.mode,
         roomCode: state.battle.room_code,
         // Overtime: set once someone has solved it and the other player is
         // (or was) given extra time.

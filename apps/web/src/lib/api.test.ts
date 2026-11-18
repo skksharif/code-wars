@@ -21,8 +21,15 @@ describe("API client", () => {
     expect(await api.joinMatchmaking()).toEqual({ status: "queued", waitedMs: 0 });
     expect(spy).toHaveBeenCalledWith("https://api.test/api/matchmaking/join", {
       method: "POST",
-      headers: { Authorization: "Bearer tok" },
+      headers: { Authorization: "Bearer tok", "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "standard" }),
     });
+  });
+
+  it("asks for a Blitz match", async () => {
+    const { api, spy } = client(async () => Response.json({ status: "queued", waitedMs: 0 }));
+    await api.joinMatchmaking("blitz");
+    expect(spy.mock.calls[0]![1]).toMatchObject({ body: JSON.stringify({ mode: "blitz" }) });
   });
 
   it("sends code as JSON", async () => {

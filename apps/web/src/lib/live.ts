@@ -1,4 +1,5 @@
 import type { Language, Verdict } from "@code-wars/shared";
+import type { GameMode } from "./api";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface BattleWatchHandlers {
@@ -101,7 +102,7 @@ export interface BattleData {
   /** Anyone's public profile, or null if there is no such player. */
   getPublicProfile(username: string): Promise<PublicProfile | null>;
   /** Top players by rating. Public. */
-  getLeaderboard(limit: number): Promise<LeaderboardEntry[]>;
+  getLeaderboard(limit: number, mode?: GameMode): Promise<LeaderboardEntry[]>;
   /** The user's finished battles, newest first. */
   getHistory(userId: string): Promise<HistoryEntry[]>;
   /** Each player's latest submitted solution. The opponent's is readable only after the battle. */
@@ -310,9 +311,9 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
       };
     },
 
-    async getLeaderboard(limit) {
+    async getLeaderboard(limit, mode = "standard") {
       const { data, error } = await supabase
-        .from("leaderboard")
+        .from(mode === "blitz" ? "blitz_leaderboard" : "leaderboard")
         .select("id, username, avatar, rating, wins, losses, draws, rank")
         .order("rating", { ascending: false })
         .order("username")

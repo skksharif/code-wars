@@ -123,6 +123,7 @@ function BattleRoom({ id }: { id: string }) {
         remainingMs={battle.remainingMs}
         rivalOnline={battle.onlineUserIds ? battle.onlineUserIds.includes(rival.userId) : null}
         overtime={battle.overtime}
+        blitz={state.battle.mode === "blitz"}
         yourEmote={emotes.mine}
         rivalEmote={emotes.theirs}
       />
@@ -208,8 +209,12 @@ function BattleRoom({ id }: { id: string }) {
               {state.battle.series.you + state.battle.series.them + state.battle.series.draws + 1}
             </p>
           ) : (
-            <p className="m-0 font-mono text-sm tracking-[0.2em] text-rival uppercase">
-              Opponent found
+            <p
+              className={`m-0 font-mono text-sm tracking-[0.2em] uppercase ${
+                state.battle.mode === "blitz" ? "text-gold" : "text-rival"
+              }`}
+            >
+              {state.battle.mode === "blitz" ? "⚡ Blitz · opponent found" : "Opponent found"}
             </p>
           )}
           <h1 className="m-0 font-display text-3xl font-bold break-words uppercase italic md:text-5xl">
@@ -264,6 +269,7 @@ function BattleRoom({ id }: { id: string }) {
             <EditorPanel
               battleId={id}
               enabled={battle.phase === "active"}
+              blitz={state.battle.mode === "blitz"}
               onSubmitted={() => void battle.refresh()}
             />
           </div>

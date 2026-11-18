@@ -17,6 +17,9 @@ export type MatchmakingStatus =
   | { status: "matched"; battleId: string }
   | { status: "timeout" };
 
+/** Ranked ("standard") or Blitz: 5 minutes, Easy, its own rating. */
+export type GameMode = "standard" | "blitz";
+
 export interface BattlePlayer {
   userId: string;
   username: string;
@@ -44,6 +47,8 @@ export interface BattleState {
     finishReason: "solved" | "timeout_score" | "timeout_draw" | "forfeit" | null;
     /** False for a custom match, which never changes ratings. */
     isRated: boolean;
+    /** Blitz battles change the Blitz rating, not the Ranked one. */
+    mode: GameMode;
     /** The room code a custom match was played from. */
     roomCode: string | null;
     /** When the winner solved it. Set once someone has passed every test. */
@@ -226,7 +231,7 @@ export interface ApiClient {
   requestRematch(battleId: string): Promise<Rematch>;
   respondRematch(battleId: string, accept: boolean): Promise<Rematch>;
   cancelRematch(battleId: string): Promise<Rematch>;
-  joinMatchmaking(): Promise<MatchmakingStatus>;
+  joinMatchmaking(mode?: GameMode): Promise<MatchmakingStatus>;
   cancelMatchmaking(): Promise<void>;
   getActiveBattle(): Promise<string | null>;
   getBattle(battleId: string): Promise<BattleState>;
@@ -327,7 +332,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     respondRematch: (id, accept) =>
       request("POST", `/api/battles/${id}/rematch/respond`, { accept }),
     cancelRematch: (id) => request("POST", `/api/battles/${id}/rematch/cancel`),
-    joinMatchmaking: () => request("POST", "/api/matchmaking/join"),
+    joinMatchmaking: (mode = "standard") => request("POST", "/api/matchmaking/join", { mode }),
     cancelMatchmaking: async () => {
       await request("POST", "/api/matchmaking/cancel");
     },

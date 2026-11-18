@@ -61,7 +61,9 @@ function PlayerCard({
   total,
   side,
   rated,
+  blitz = false,
 }: {
+  blitz?: boolean;
   player: BattlePlayer;
   total: number;
   side: "you" | "rival";
@@ -104,7 +106,7 @@ function PlayerCard({
       {rated && player.ratingAfter !== null && delta !== null ? (
         <p
           className="m-0 flex items-baseline gap-3 font-display font-bold"
-          aria-label={`Rating ${player.ratingBefore} to ${player.ratingAfter}, change ${delta >= 0 ? "plus" : "minus"} ${Math.abs(delta)}`}
+          aria-label={`${blitz ? "Blitz rating" : "Rating"} ${player.ratingBefore} to ${player.ratingAfter}, change ${delta >= 0 ? "plus" : "minus"} ${Math.abs(delta)}`}
         >
           <span className="text-2xl text-muted">{player.ratingBefore}</span>
           <span aria-hidden="true" className="text-muted">
@@ -150,6 +152,7 @@ export function ResultView({
   const [solutions, setSolutions] = useState<FinalSubmission[] | "loading" | "error">("loading");
   const [tab, setTab] = useState<"you" | "rival">("you");
   const rated = state.battle.isRated !== false;
+  const blitz = state.battle.mode === "blitz";
 
   useEffect(() => {
     let active = true;
@@ -184,9 +187,11 @@ export function ResultView({
       <RematchBanner view={rematch} rival={rival.username} />
       <section className="border-b border-line px-4 pt-7 pb-6 text-center md:px-[5%] md:pt-10 md:pb-7">
         <p className="m-0 font-mono text-xs tracking-[0.2em] text-muted uppercase">
-          {rated
-            ? "Battle over"
-            : `Custom match${state.battle.roomCode ? ` · ${state.battle.roomCode}` : ""}`}
+          {blitz
+            ? "⚡ Blitz · battle over"
+            : rated
+              ? "Battle over"
+              : `Custom match${state.battle.roomCode ? ` · ${state.battle.roomCode}` : ""}`}
         </p>
         <h1
           className={`mt-2 mb-0 font-display text-6xl leading-none font-bold tracking-wider uppercase italic sm:text-7xl md:text-9xl ${headlineStyle}`}
@@ -217,8 +222,14 @@ export function ResultView({
       </section>
 
       <section className="relative flex flex-wrap items-stretch">
-        <PlayerCard player={you} total={state.totalTests} side="you" rated={rated} />
-        <PlayerCard player={rival} total={state.totalTests} side="rival" rated={rated} />
+        <PlayerCard player={you} total={state.totalTests} side="you" rated={rated} blitz={blitz} />
+        <PlayerCard
+          player={rival}
+          total={state.totalTests}
+          side="rival"
+          rated={rated}
+          blitz={blitz}
+        />
         {emotes ? (
           <>
             <EmoteBubble emote={emotes.mine} side="you" who="You" className="-top-4 left-3" />
@@ -241,14 +252,20 @@ export function ResultView({
           <div className="flex flex-col items-center gap-3">
             <p className="m-0 text-center text-muted">Rematch opens when the overtime ends.</p>
             <Link
-              to={rated ? "/arena" : "/arena?mode=custom"}
+              to={blitz ? "/arena?mode=blitz" : rated ? "/arena" : "/arena?mode=custom"}
               className="inline-flex h-12 items-center border border-line-strong px-6 font-display font-semibold tracking-widest text-ink uppercase no-underline hover:border-muted"
             >
               Find new battle
             </Link>
           </div>
         ) : (
-          <WhatNext view={rematch} rival={rival.username} rivalHere={rivalHere} rated={rated} />
+          <WhatNext
+            view={rematch}
+            rival={rival.username}
+            rivalHere={rivalHere}
+            rated={rated}
+            blitz={blitz}
+          />
         )}
 
         <section aria-label="Solutions" className="border border-line bg-panel">

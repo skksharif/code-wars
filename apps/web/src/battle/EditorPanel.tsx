@@ -16,10 +16,10 @@ function isTouchDevice(): boolean {
 
 type Kind = "run" | "submit";
 
-const COOLDOWN_MS: Record<Kind, number> = {
-  run: LIMITS.runCooldownMs,
-  submit: LIMITS.submitCooldownMs,
-};
+function cooldownMs(kind: Kind, blitz: boolean): number {
+  if (kind === "run") return LIMITS.runCooldownMs;
+  return blitz ? LIMITS.blitzSubmitCooldownMs : LIMITS.submitCooldownMs;
+}
 
 type Outcome =
   | { kind: "run"; result: RunResult }
@@ -30,7 +30,10 @@ export function EditorPanel({
   battleId,
   enabled,
   onSubmitted,
+  blitz = false,
 }: {
+  /** Blitz: submits wait 5 seconds instead of 10. */
+  blitz?: boolean;
   battleId: string;
   /** False during the get-ready countdown and after time is up. */
   enabled: boolean;
@@ -83,7 +86,7 @@ export function EditorPanel({
         onSubmitted();
       }
       // The server's cooldown counts from when the request arrived.
-      startCooldown(startedAt + COOLDOWN_MS[kind]);
+      startCooldown(startedAt + cooldownMs(kind, blitz));
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === "COOLDOWN" && caught.retryAfterMs) {
         startCooldown(Date.now() + caught.retryAfterMs);

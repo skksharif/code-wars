@@ -12,6 +12,8 @@ export interface Profile {
   wins: number;
   losses: number;
   draws: number;
+  /** Blitz has its own rating and record. */
+  blitz: { rating: number; wins: number; losses: number; draws: number };
 }
 
 /** A message that is safe and useful to show to the user. */
@@ -106,10 +108,32 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
     async getProfile(userId) {
       const { data } = await supabase
         .from("profiles")
-        .select("username, avatar, rating, wins, losses, draws")
+        .select(
+          "username, avatar, rating, wins, losses, draws, blitz_rating, blitz_wins, blitz_losses, blitz_draws",
+        )
         .eq("id", userId)
         .maybeSingle();
-      return (data as Profile | null) ?? null;
+      if (!data) return null;
+      const row = data as Omit<Profile, "blitz"> & {
+        blitz_rating: number | null;
+        blitz_wins: number | null;
+        blitz_losses: number | null;
+        blitz_draws: number | null;
+      };
+      return {
+        username: row.username,
+        avatar: row.avatar,
+        rating: row.rating,
+        wins: row.wins,
+        losses: row.losses,
+        draws: row.draws,
+        blitz: {
+          rating: row.blitz_rating ?? 1200,
+          wins: row.blitz_wins ?? 0,
+          losses: row.blitz_losses ?? 0,
+          draws: row.blitz_draws ?? 0,
+        },
+      };
     },
   };
 }

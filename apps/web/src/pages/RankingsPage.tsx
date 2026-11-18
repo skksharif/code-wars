@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import type { GameMode } from "../lib/api";
 import type { LeaderboardEntry } from "../lib/live";
 import { useServices } from "../services";
 import { Avatar } from "../components/Avatar";
@@ -46,24 +47,47 @@ function PodiumCard({ entry, isYou }: { entry: LeaderboardEntry; isYou: boolean 
 export function RankingsPage() {
   const { data } = useServices();
   const { user } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const mode: GameMode = params.get("mode") === "blitz" ? "blitz" : "standard";
   const [entries, setEntries] = useState<LeaderboardEntry[] | "loading" | "error">("loading");
 
   useEffect(() => {
     let active = true;
-    data.getLeaderboard(TOP).then(
+    setEntries("loading");
+    data.getLeaderboard(TOP, mode).then(
       (rows) => active && setEntries(rows),
       () => active && setEntries("error"),
     );
     return () => {
       active = false;
     };
-  }, [data]);
+  }, [data, mode]);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-[5%] md:py-10">
       <h1 className="m-0 font-display text-4xl leading-none font-bold tracking-wider uppercase italic md:text-5xl">
         Global rankings
       </h1>
+      <div role="tablist" aria-label="Rating" className="flex w-max border border-line-strong">
+        {(["standard", "blitz"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={mode === key}
+            onClick={() => setParams(key === "blitz" ? { mode: "blitz" } : {}, { replace: true })}
+            className={`h-11 cursor-pointer border-0 px-5 font-display text-sm font-bold tracking-[0.14em] uppercase ${
+              mode !== key
+                ? "bg-transparent text-muted hover:text-ink"
+                : key === "blitz"
+                  ? "bg-gold/15 text-gold"
+                  : "bg-you/15 text-you"
+            }`}
+          >
+            {key === "blitz" ? "⚡ Blitz" : "Ranked"}
+          </button>
+        ))}
+      </div>
 
       {entries === "loading" ? (
         <p role="status" className="m-0 text-muted">

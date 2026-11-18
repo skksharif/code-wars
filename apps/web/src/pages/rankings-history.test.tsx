@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { HistoryEntry, LeaderboardEntry } from "../lib/live";
 import { createFakeAuth, TEST_USER } from "../test/fakeAuth";
@@ -105,6 +106,19 @@ describe("rankings", () => {
       "href",
       "/rankings",
     );
+  });
+});
+
+describe("blitz rankings", () => {
+  it("switches between Ranked and Blitz rankings", async () => {
+    services.leaderboard = LEADERBOARD;
+    renderWithApp(createFakeAuth(), services, "/rankings");
+    const blitz = await screen.findByRole("tab", { name: "⚡ Blitz" });
+    expect(screen.getByRole("tab", { name: "Ranked" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(blitz);
+    expect(blitz).toHaveAttribute("aria-selected", "true");
+    await screen.findByRole("list", { name: "Top three" });
+    expect(services.leaderboardModes).toEqual(["standard", "blitz"]);
   });
 });
 

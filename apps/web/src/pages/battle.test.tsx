@@ -814,3 +814,53 @@ describe("quick emotes", () => {
     expect(await screen.findByText("Lucky problem 🧂")).toBeInTheDocument();
   });
 });
+
+describe("blitz", () => {
+  it("has its own tab with the Blitz rating, and searches the Blitz queue", async () => {
+    open("/arena?mode=blitz");
+    expect(await screen.findByRole("tab", { name: "⚡ Blitz" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("1188")).toBeInTheDocument();
+    expect(screen.getByText("3 W · 1 L · 0 D")).toBeInTheDocument();
+    expect(screen.getByText("Blitz · Easy · 5 minutes")).toBeInTheDocument();
+    const find = screen.getByRole("button", { name: /Find Blitz/ });
+    await waitFor(() => expect(find).toBeEnabled());
+    await userEvent.click(find);
+    await waitFor(() => expect(services.api.joinMatchmaking).toHaveBeenCalledWith("blitz"));
+  });
+
+  it("Ranked still searches the Ranked queue", async () => {
+    open("/arena");
+    const find = await screen.findByRole("button", { name: "Find Battle" });
+    await waitFor(() => expect(find).toBeEnabled());
+    await userEvent.click(find);
+    await waitFor(() => expect(services.api.joinMatchmaking).toHaveBeenCalledWith("standard"));
+  });
+
+  it("marks a Blitz battle on the clock", async () => {
+    const state = battleState();
+    state.battle.mode = "blitz";
+    services.api.getBattle.mockResolvedValue(state);
+    open(`/battle/${BATTLE_ID}`);
+    expect(await screen.findByText("⚡ Blitz ·")).toBeInTheDocument();
+  });
+
+  it("shows Blitz rating changes and offers the next Blitz", async () => {
+    services.api.getBattle.mockResolvedValue(
+      finishedState(
+        { result: "win", ratingBefore: 1188, ratingAfter: 1204, bestPassed: 5, attempts: 2 },
+        { result: "loss", ratingBefore: 1210, ratingAfter: 1194 },
+        { finishReason: "solved", winnerId: "user-1", mode: "blitz" },
+      ),
+    );
+    open(`/battle/${BATTLE_ID}`);
+    expect(await screen.findByText("⚡ Blitz · battle over")).toBeInTheDocument();
+    expect(screen.getByLabelText("Blitz rating 1188 to 1204, change plus 16")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "⚡ Next Blitz" })).toHaveAttribute(
+      "href",
+      "/arena?mode=blitz",
+    );
+  });
+});

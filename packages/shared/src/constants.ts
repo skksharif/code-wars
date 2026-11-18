@@ -36,6 +36,9 @@ export const LIMITS = {
   battleDurationMs: 15 * 60 * 1000,
   getReadyMs: 10 * 1000,
   submitCooldownMs: 10 * 1000,
+  /** Blitz keeps the pace up: submits wait 5 seconds. */
+  blitzSubmitCooldownMs: 5 * 1000,
+  blitzDurationMs: 5 * 60 * 1000,
   runCooldownMs: 5 * 1000,
   maxCodeBytes: 64 * 1024,
   matchWindowStart: 100,

@@ -1,11 +1,13 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "outline" | "ghost";
+  variant?: "primary" | "gold" | "outline" | "ghost";
 };
 
 const BUTTON_STYLES: Record<NonNullable<ButtonProps["variant"]>, string> = {
   primary: "cut glow-you bg-you text-ground font-bold hover:brightness-110",
+  /** Blitz. */
+  gold: "cut glow-gold bg-gold text-ground font-bold hover:brightness-110",
   outline: "border border-you text-you hover:bg-you/10",
   ghost: "border border-line-strong text-ink hover:border-muted",
 };

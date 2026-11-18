@@ -5,7 +5,7 @@ import { CustomPanel } from "../rooms/CustomPanel";
 import { useAuth } from "../auth/AuthContext";
 import { formatClock } from "../battle/useBattle";
 import { Button } from "../components/ui";
-import { ApiError } from "../lib/api";
+import { ApiError, type GameMode } from "../lib/api";
 import { useServices } from "../services";
 import { Avatar } from "../components/Avatar";
 import { OnlineBadge } from "../lib/online";
@@ -28,6 +28,10 @@ export function ArenaPage() {
   const searching = search.status === "searching";
   const searchingRef = useRef(false);
   searchingRef.current = searching;
+  const modeParam = params.get("mode");
+  const mode: ArenaMode = modeParam === "custom" || modeParam === "blitz" ? modeParam : "ranked";
+  const game: GameMode = mode === "blitz" ? "blitz" : "standard";
+  const blitz = game === "blitz";
 
   // Resume a battle in progress (for example after a reload).
   useEffect(() => {
@@ -47,7 +51,7 @@ export function ArenaPage() {
 
   const heartbeat = useCallback(async () => {
     try {
-      const result = await api.joinMatchmaking();
+      const result = await api.joinMatchmaking(game);
       if (!searchingRef.current) return;
       if (result.status === "matched") {
         searchingRef.current = false;
@@ -66,7 +70,7 @@ export function ArenaPage() {
         error: caught instanceof ApiError ? caught.message : "Something went wrong.",
       });
     }
-  }, [api, navigate]);
+  }, [api, navigate, game]);
 
   useEffect(() => {
     if (!searching) return;
@@ -96,11 +100,10 @@ export function ArenaPage() {
     }
   }
 
-  const mode = params.get("mode") === "custom" ? "custom" : "ranked";
-  function setMode(next: "ranked" | "custom") {
+  function setMode(next: ArenaMode) {
     if (next === mode) return;
     if (searching) void cancel();
-    setParams(next === "custom" ? { mode: "custom" } : {}, { replace: true });
+    setParams(next === "ranked" ? {} : { mode: next }, { replace: true });
   }
   const tabs = <ModeTabs mode={mode} onChange={setMode} />;
 
@@ -113,7 +116,10 @@ export function ArenaPage() {
     );
   }
 
-  const rating = profile?.rating ?? LIMITS.initialRating;
+  const record = profile ? (blitz ? profile.blitz : profile) : null;
+  const rating = record?.rating ?? LIMITS.initialRating;
+  const findLabel = blitz ? "Find Blitz" : "Find Battle";
+  const caption = blitz ? "Blitz · Easy · 5 minutes" : "Ranked · one problem · 15 minutes";
   const elapsedMs = searching ? Math.max(0, now - search.startedAt) : 0;
   const range = searching ? matchWindow(search.waitedMs) : LIMITS.matchWindowStart;
   const start = () => setSearch({ status: "searching", startedAt: Date.now(), waitedMs: 0 });
@@ -137,7 +143,9 @@ export function ArenaPage() {
     return (
       <PhoneArena
         tabs={tabs}
+        blitz={blitz}
         rating={rating}
+        record={record}
         searching={searching}
         checking={search.status === "checking"}
         elapsedMs={elapsedMs}
@@ -157,18 +165,30 @@ export function ArenaPage() {
         <OnlineBadge />
       </div>
       <section className="flex flex-wrap items-stretch justify-center gap-5 md:gap-8">
-        <div className="glow-you flex max-w-sm min-w-0 flex-1 basis-72 flex-col gap-2 border border-you bg-panel p-5 md:p-7">
-          <p className="m-0 font-mono text-xs tracking-widest text-you uppercase">You</p>
+        <div
+          className={`flex max-w-sm min-w-0 flex-1 basis-72 flex-col gap-2 border bg-panel p-5 md:p-7 ${
+            blitz ? "glow-gold border-gold" : "glow-you border-you"
+          }`}
+        >
+          <p
+            className={`m-0 font-mono text-xs tracking-widest uppercase ${blitz ? "text-gold" : "text-you"}`}
+          >
+            {blitz ? "You · Blitz rating" : "You"}
+          </p>
           <h1 className="m-0 flex min-w-0 items-center gap-3 font-display text-3xl font-bold break-all md:text-4xl">
             {profile ? <Avatar id={profile.avatar} size={56} frame="#22E6FF" decorative /> : null}
             {profile?.username ?? "Player"}
           </h1>
-          <p className="text-glow-you m-0 font-display text-6xl leading-none font-bold text-you md:text-7xl">
+          <p
+            className={`m-0 font-display text-6xl leading-none font-bold md:text-7xl ${
+              blitz ? "text-glow-gold text-gold" : "text-glow-you text-you"
+            }`}
+          >
             {rating}
           </p>
-          {profile ? (
+          {record ? (
             <p className="m-0 font-mono text-muted">
-              {profile.wins} W · {profile.losses} L · {profile.draws} D
+              {record.wins} W · {record.losses} L · {record.draws} D
             </p>
           ) : null}
         </div>
@@ -186,14 +206,16 @@ export function ArenaPage() {
             </Button>
           ) : (
             <Button
+              variant={blitz ? "gold" : "primary"}
               className="h-[72px] px-12 text-2xl"
               disabled={search.status === "checking"}
               onClick={start}
             >
-              Find Battle
+              {blitz ? "⚡ " : ""}
+              {findLabel}
             </Button>
           )}
-          <p className="m-0 text-sm text-muted">Ranked · one problem · 15 minutes</p>
+          <p className="m-0 text-sm text-muted">{caption}</p>
         </div>
 
         <div
@@ -215,7 +237,7 @@ export function ArenaPage() {
               </p>
             </div>
           ) : (
-            <p className="m-0 font-mono text-muted">Press Find Battle to search.</p>
+            <p className="m-0 font-mono text-muted">Press {findLabel} to search.</p>
           )}
         </div>
       </section>
@@ -225,21 +247,23 @@ export function ArenaPage() {
   );
 }
 
-/** Ranked (matchmaking by rating) or Custom (a room with a friend). */
-function ModeTabs({
-  mode,
-  onChange,
-}: {
-  mode: "ranked" | "custom";
-  onChange: (mode: "ranked" | "custom") => void;
-}) {
+type ArenaMode = "ranked" | "blitz" | "custom";
+
+const MODE_LABELS: Record<ArenaMode, string> = {
+  ranked: "Ranked",
+  blitz: "⚡ Blitz",
+  custom: "Custom",
+};
+
+/** Ranked (by rating), Blitz (5 minutes, its own rating) or Custom (a room with a friend). */
+function ModeTabs({ mode, onChange }: { mode: ArenaMode; onChange: (mode: ArenaMode) => void }) {
   return (
     <div
       role="tablist"
       aria-label="Match type"
       className="mx-auto flex w-full max-w-xl border-b border-line"
     >
-      {(["ranked", "custom"] as const).map((key) => (
+      {(["ranked", "blitz", "custom"] as const).map((key) => (
         <button
           key={key}
           type="button"
@@ -247,13 +271,25 @@ function ModeTabs({
           aria-selected={mode === key}
           onClick={() => onChange(key)}
           className={`h-12 flex-1 cursor-pointer border-0 border-b-2 bg-transparent font-display text-base font-bold tracking-[0.14em] uppercase ${
-            mode === key ? "border-you text-you" : "border-transparent text-muted hover:text-ink"
+            mode !== key
+              ? "border-transparent text-muted hover:text-ink"
+              : key === "blitz"
+                ? "border-gold text-gold"
+                : "border-you text-you"
           }`}
         >
-          {key === "ranked" ? "Ranked" : "Custom"}
+          {MODE_LABELS[key]}
         </button>
       ))}
     </div>
+  );
+}
+
+function BoltIcon() {
+  return (
+    <svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M13.5 2 4.5 13.5h6.5L9.5 22 19.5 9.5H13z" fill="currentColor" />
+    </svg>
   );
 }
 
@@ -276,7 +312,9 @@ function BracketsIcon() {
  */
 function PhoneArena({
   tabs,
+  blitz,
   rating,
+  record,
   searching,
   checking,
   elapsedMs,
@@ -286,7 +324,9 @@ function PhoneArena({
   children,
 }: {
   tabs: ReactNode;
+  blitz: boolean;
   rating: number;
+  record: { wins: number; losses: number; draws: number } | null;
   searching: boolean;
   checking: boolean;
   elapsedMs: number;
@@ -315,16 +355,19 @@ function PhoneArena({
             <h1 className="m-0 truncate font-display text-xl leading-tight font-bold">
               {profile?.username ?? "Player"}
             </h1>
-            {profile ? (
+            {record ? (
               <p className="m-0 font-mono text-xs text-muted">
-                {profile.wins} W · {profile.losses} L · {profile.draws} D
+                {blitz ? "Blitz · " : ""}
+                {record.wins} W · {record.losses} L · {record.draws} D
               </p>
             ) : null}
           </div>
           <div className="flex flex-col items-end gap-1">
             <span
-              className="text-glow-you font-display text-4xl leading-none font-bold text-you"
-              aria-label={`Rating ${rating}`}
+              className={`font-display text-4xl leading-none font-bold ${
+                blitz ? "text-glow-gold text-gold" : "text-glow-you text-you"
+              }`}
+              aria-label={`${blitz ? "Blitz rating" : "Rating"} ${rating}`}
             >
               {rating}
             </span>
@@ -376,20 +419,28 @@ function PhoneArena({
             </div>
           </div>
         ) : (
-          <div className="drop-shadow-[0_0_28px_rgba(34,230,255,0.55)] focus-within:drop-shadow-[0_0_6px_#ffffff]">
+          <div
+            className={`focus-within:drop-shadow-[0_0_6px_#ffffff] ${
+              blitz
+                ? "drop-shadow-[0_0_28px_rgba(255,200,61,0.55)]"
+                : "drop-shadow-[0_0_28px_rgba(34,230,255,0.55)]"
+            }`}
+          >
             <button
               type="button"
-              aria-label="Find Battle"
+              aria-label={blitz ? "Find Blitz" : "Find Battle"}
               onClick={onStart}
               disabled={checking}
-              className="flex h-[254px] w-[230px] cursor-pointer flex-col items-center justify-center gap-1.5 border-0 bg-you text-ground transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`flex h-[254px] w-[230px] cursor-pointer flex-col items-center justify-center gap-1.5 border-0 text-ground transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                blitz ? "bg-gold" : "bg-you"
+              }`}
               style={{ clipPath: HEXAGON }}
             >
-              <BracketsIcon />
+              {blitz ? <BoltIcon /> : <BracketsIcon />}
               <span className="text-center font-display text-3xl leading-[1.05] font-bold tracking-[0.1em] uppercase">
                 Find
                 <br />
-                Battle
+                {blitz ? "Blitz" : "Battle"}
               </span>
             </button>
           </div>
@@ -406,7 +457,7 @@ function PhoneArena({
           </>
         ) : (
           <p className="m-0 text-center text-sm text-muted">
-            Ranked · one problem · 15 minutes
+            {blitz ? "Blitz · Easy · 5 minutes" : "Ranked · one problem · 15 minutes"}
             <br />
             Opponent within ± {range} rating
           </p>

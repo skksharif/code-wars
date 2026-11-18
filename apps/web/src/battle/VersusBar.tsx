@@ -52,7 +52,10 @@ export function VersusBar({
   overtime = false,
   yourEmote = null,
   rivalEmote = null,
+  blitz = false,
 }: {
+  /** Blitz: a gold clock that turns red in the last 30 seconds. */
+  blitz?: boolean;
   /** Quick emote bubbles shown under each name. */
   yourEmote?: Emote | null;
   rivalEmote?: Emote | null;
@@ -73,6 +76,14 @@ export function VersusBar({
           ? "Overtime"
           : "Time left"
         : "Time is up";
+  const hurry = blitz && phase === "active" && !overtime && remainingMs <= 30_000;
+  const clockColour = overtime
+    ? "text-glow-rival text-rival"
+    : hurry
+      ? "text-glow-rival text-rival"
+      : blitz
+        ? "text-glow-gold text-gold"
+        : "";
   // On phones the three parts share one row (you · clock · rival) and the
   // details move under each name; the bar stays pinned while the page scrolls.
   return (
@@ -100,12 +111,15 @@ export function VersusBar({
         aria-label={`${clockLabel} ${formatClock(remainingMs)}`}
         className="flex flex-none flex-col items-center md:px-3"
       >
-        <span className="text-[10px] tracking-[0.16em] text-muted uppercase md:text-[11px] md:tracking-[0.2em]">
+        <span
+          className={`text-[10px] tracking-[0.16em] uppercase md:text-[11px] md:tracking-[0.2em] ${
+            blitz ? "text-gold" : "text-muted"
+          }`}
+        >
+          {blitz ? <span aria-hidden="true">⚡ Blitz · </span> : null}
           {clockLabel}
         </span>
-        <span
-          className={`font-display text-3xl leading-none font-bold md:text-5xl ${overtime ? "text-glow-rival text-rival" : ""}`}
-        >
+        <span className={`font-display text-3xl leading-none font-bold md:text-5xl ${clockColour}`}>
           {formatClock(remainingMs)}
         </span>
       </div>

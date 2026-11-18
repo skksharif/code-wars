@@ -153,7 +153,10 @@ export function WhatNext({
   rival,
   rivalHere,
   rated,
+  blitz = false,
 }: {
+  /** Blitz: "Next Blitz" goes straight back to the Blitz queue. */
+  blitz?: boolean;
   view: RematchView;
   rival: string;
   /** Whether the opponent is still on the result screen (null: unknown). */
@@ -251,12 +254,21 @@ export function WhatNext({
 
       <FriendButton username={rival} />
 
-      <Link
-        to={rated ? "/arena" : "/arena?mode=custom"}
-        className="inline-flex h-12 items-center justify-center border border-line-strong font-display font-semibold tracking-widest text-ink uppercase no-underline hover:border-muted"
-      >
-        Find new battle
-      </Link>
+      {blitz ? (
+        <Link
+          to="/arena?mode=blitz"
+          className="cut glow-gold inline-flex h-12 items-center justify-center bg-gold font-display font-bold tracking-widest text-ground uppercase no-underline hover:brightness-110"
+        >
+          ⚡ Next Blitz
+        </Link>
+      ) : (
+        <Link
+          to={rated ? "/arena" : "/arena?mode=custom"}
+          className="inline-flex h-12 items-center justify-center border border-line-strong font-display font-semibold tracking-widest text-ink uppercase no-underline hover:border-muted"
+        >
+          Find new battle
+        </Link>
+      )}
     </section>
   );
 }

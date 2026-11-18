@@ -104,3 +104,40 @@ describe("matchmaking API against the real database functions", () => {
     expect(res.body).toEqual({ error: { code: "INTERNAL", message: "Something went wrong." } });
   });
 });
+
+describe("blitz matchmaking API", () => {
+  async function join(user: string, body?: unknown) {
+    const res = await app.request(
+      "/api/matchmaking/join",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${user}`, "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+      env,
+    );
+    return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+  }
+
+  it("pairs two Blitz players into a Blitz battle", async () => {
+    expect((await join(alice, { mode: "blitz" })).body).toMatchObject({ status: "queued" });
+    // A Ranked search does not meet the Blitz one.
+    expect((await join(bob)).body).toMatchObject({ status: "queued" });
+    const matched = await join(bob, { mode: "blitz" });
+    expect(matched.body).toMatchObject({ status: "matched", battleId: expect.any(String) });
+
+    const res = await app.request(
+      `/api/battles/${String(matched.body.battleId)}`,
+      { headers: { Authorization: `Bearer ${alice}` } },
+      env,
+    );
+    const state = (await res.json()) as { battle: { mode: string } };
+    expect(state.battle.mode).toBe("blitz");
+  });
+
+  it("rejects an unknown mode", async () => {
+    const res = await join(alice, { mode: "bullet" });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: { code: "INVALID_INPUT" } });
+  });
+});

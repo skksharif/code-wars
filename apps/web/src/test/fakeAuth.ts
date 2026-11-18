@@ -14,6 +14,7 @@ export const TEST_PROFILE: Profile = {
   wins: 1,
   losses: 0,
   draws: 0,
+  blitz: { rating: 1188, wins: 3, losses: 1, draws: 0 },
 };
 
 export function createFakeAuth(initialUser: AuthUser | null = null): FakeAuth {

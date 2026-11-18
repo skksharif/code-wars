@@ -1,5 +1,10 @@
 import type { Hono } from "hono";
+import { z } from "zod";
 import type { AppContext } from "../app";
+import { ApiError } from "../errors";
+
+// No body (older clients) means Ranked.
+const joinSchema = z.object({ mode: z.enum(["standard", "blitz"]).default("standard") }).strict();
 
 interface FindMatchResult {
   status: "queued" | "matched" | "timeout";
@@ -11,8 +16,12 @@ export function registerMatchmakingRoutes(app: Hono<AppContext>): void {
   // Join the queue or refresh the heartbeat. Clients call this every 5 seconds
   // while searching; pairing itself is decided atomically in the database.
   app.post("/api/matchmaking/join", async (c) => {
+    const raw: unknown = await c.req.json().catch(() => ({}));
+    const body = joinSchema.safeParse(raw ?? {});
+    if (!body.success) throw new ApiError("INVALID_INPUT", "Unknown game mode.");
     const result = await c.get("db").rpc<FindMatchResult>("find_match", {
       p_user: c.get("userId"),
+      p_mode: body.data.mode,
     });
     if (result.status === "matched") {
       return c.json({ status: "matched", battleId: result.battle_id });

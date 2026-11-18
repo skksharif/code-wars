@@ -59,6 +59,7 @@ export function battleState(overrides: Partial<BattleState> = {}): BattleState {
       winnerId: null,
       finishReason: null,
       isRated: true,
+      mode: "standard",
       roomCode: null,
       firstSolvedAt: null,
       overtimeEndsAt: null,
@@ -172,6 +173,8 @@ export interface FakeServices extends Services {
   roomWatchers: (() => void)[];
   solutions: FinalSubmission[];
   leaderboard: LeaderboardEntry[] | Error;
+  /** Which rankings were asked for, in order. */
+  leaderboardModes: string[];
   history: HistoryEntry[] | Error;
   profiles: Record<string, PublicProfile> | Error;
 }
@@ -199,6 +202,7 @@ export function createFakeServices(): FakeServices {
     friendList: { friends: [], incoming: [], outgoing: [] },
     solutions: [],
     leaderboard: [],
+    leaderboardModes: [],
     history: [],
     profiles: {},
     api: {
@@ -342,7 +346,8 @@ export function createFakeServices(): FakeServices {
         );
         return found ?? null;
       },
-      getLeaderboard: async () => {
+      getLeaderboard: async (_limit, mode) => {
+        services.leaderboardModes.push(mode ?? "standard");
         if (services.leaderboard instanceof Error) throw services.leaderboard;
         return services.leaderboard;
       },
