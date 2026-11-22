@@ -36,7 +36,7 @@ export function PrivacyPage() {
         </header>
 
         <Section title="What we collect">
-          <ul className="m-0 flex flex-col gap-2 pl-5">
+          <ul className="m-0 flex list-disc flex-col gap-2 pl-5 marker:text-you">
             <li>
               <b className="text-ink">Account details:</b> your email address, username, chosen
               avatar and password. Passwords are stored only as secure hashes by our login provider;
@@ -57,7 +57,7 @@ export function PrivacyPage() {
         </Section>
 
         <Section title="How we use it">
-          <ul className="m-0 flex flex-col gap-2 pl-5">
+          <ul className="m-0 flex list-disc flex-col gap-2 pl-5 marker:text-you">
             <li>To create your account and confirm your email with a one-time code.</li>
             <li>To match you with opponents, run and judge your code, and keep ratings.</li>
             <li>To show public rankings and profiles (username, avatar, rating and record).</li>
@@ -75,7 +75,7 @@ export function PrivacyPage() {
         </Section>
 
         <Section title="Services we use">
-          <ul className="m-0 flex flex-col gap-2 pl-5">
+          <ul className="m-0 flex list-disc flex-col gap-2 pl-5 marker:text-you">
             <li>
               <b className="text-ink">Supabase</b>: database, login and live updates.
             </li>
