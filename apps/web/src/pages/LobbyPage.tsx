@@ -141,8 +141,8 @@ export function LobbyPage({
           className="w-full border border-line bg-panel lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center"
         >
           <nav aria-label="Account" className="flex border-b border-line">
-            {tab("signup", "Sign up", "/")}
-            {tab("login", "Log in", "/login")}
+            {tab("signup", "Sign up", "/signup")}
+            {tab("login", "Log in", "/")}
           </nav>
           <div className="p-5 md:p-7">
             {mode === "signup" ? (

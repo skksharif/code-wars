@@ -5,7 +5,7 @@ import { useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { NotificationsProvider } from "./friends/notifications";
 import { OnlineProvider } from "./lib/online";
-import { LandingPage } from "./pages/LandingPage";
+import { LandingPage, SignUpPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 
 // A first-time visitor lands on the landing or log-in page, so those two are
@@ -54,6 +54,7 @@ export function App() {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
               <Route
                 path="/arena"
                 element={

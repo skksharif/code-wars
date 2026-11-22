@@ -12,9 +12,9 @@ afterEach(cleanup);
 const renderApp = (auth: FakeAuth, path = "/") => renderWithApp(auth, createFakeServices(), path);
 
 describe("routing and access", () => {
-  it("shows the landing page with the sign-up form to visitors", async () => {
+  it("shows the landing page with the log-in form to visitors", async () => {
     renderApp(createFakeAuth());
-    expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
+    expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Code. Clash. Climb.");
     // The page renders before the login check finishes; the menu's Log in
     // button appears once it has, so wait for it rather than checking at once.
@@ -75,7 +75,7 @@ describe("routing and access", () => {
       await userEvent.click(await screen.findByRole("button", { name: "Menu" }));
       const menu = screen.getByRole("navigation", { name: "Account" });
       await userEvent.click(within(menu).getByRole("button", { name: "Log out" }));
-      expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
+      expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
       expect(auth.signOut).toHaveBeenCalled();
     });
 
@@ -93,7 +93,7 @@ describe("routing and access", () => {
 
     it("is not shown to visitors", async () => {
       renderApp(createFakeAuth());
-      await screen.findByRole("form", { name: "Create account" });
+      await screen.findByRole("form", { name: "Log in" });
       expect(screen.queryByRole("button", { name: "Menu" })).not.toBeInTheDocument();
     });
   });
@@ -112,7 +112,7 @@ describe("routing and access", () => {
 
   it("has no bottom tab bar for visitors", async () => {
     renderApp(createFakeAuth());
-    await screen.findByRole("form", { name: "Create account" });
+    await screen.findByRole("form", { name: "Log in" });
     expect(screen.queryByRole("navigation", { name: "Sections" })).not.toBeInTheDocument();
   });
 
@@ -152,7 +152,7 @@ describe("routing and access", () => {
     renderWithApp(auth, services, "/arena");
     await waitFor(() => expect(services.lobby).toHaveLength(1));
     await userEvent.click(await screen.findByRole("button", { name: "Log out" }));
-    expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
+    expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
     expect(auth.signOut).toHaveBeenCalled();
     expect(services.lobby).toHaveLength(0);
   });
@@ -183,18 +183,20 @@ describe("lobby", () => {
   it("switches between Sign up and Log in on the same card", async () => {
     renderApp(createFakeAuth());
     const account = await screen.findByRole("navigation", { name: "Account" });
-    expect(within(account).getByRole("link", { name: "Sign up" })).toHaveAttribute(
+    // Log in is the default tab.
+    expect(within(account).getByRole("link", { name: "Log in" })).toHaveAttribute(
       "aria-current",
       "page",
     );
+    expect(screen.getByRole("form", { name: "Log in" })).toBeInTheDocument();
     const user = userEvent.setup();
-    await user.click(within(account).getByRole("link", { name: "Log in" }));
-    expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
+    await user.click(within(account).getByRole("link", { name: "Sign up" }));
+    expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Code. Clash. Climb.");
     // Each tab is its own page, so look the card up again.
     const again = screen.getByRole("navigation", { name: "Account" });
-    await user.click(within(again).getByRole("link", { name: "Sign up" }));
-    expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
+    await user.click(within(again).getByRole("link", { name: "Log in" }));
+    expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
   });
 
   it("shows the top three", async () => {
@@ -285,7 +287,7 @@ describe("log in extras", () => {
 describe("sign up", () => {
   it("sends the chosen avatar with the account", async () => {
     const auth = createFakeAuth();
-    renderApp(auth);
+    renderApp(auth, "/signup");
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Email"), "new@example.test");
     await user.type(screen.getByLabelText("Username"), "coder_42");
@@ -301,7 +303,7 @@ describe("sign up", () => {
   it("checks the username while typing, without leaving the field", async () => {
     const auth = createFakeAuth();
     auth.isUsernameAvailable = vi.fn(async (name: string) => name !== "taken_one");
-    renderApp(auth);
+    renderApp(auth, "/signup");
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Username"), "taken_one");
     expect(await screen.findByText("That username is taken.")).toBeInTheDocument();
@@ -309,7 +311,7 @@ describe("sign up", () => {
   });
 
   it("rates the new password's strength", async () => {
-    renderApp(createFakeAuth());
+    renderApp(createFakeAuth(), "/signup");
     const user = userEvent.setup();
     const field = await screen.findByLabelText("Password");
     await user.type(field, "abcdef");
@@ -329,7 +331,7 @@ describe("sign up", () => {
 
   it("creates the account with the username and enters the arena", async () => {
     const auth = createFakeAuth();
-    renderApp(auth);
+    renderApp(auth, "/signup");
     const user = await fill("new@example.test", "coder_42", "secret1");
     await user.click(submit());
     expect(await screen.findByText("coder_42", { selector: "h1" })).toBeInTheDocument();
@@ -343,7 +345,7 @@ describe("sign up", () => {
 
   it("checks the username when leaving the field", async () => {
     const auth = createFakeAuth();
-    renderApp(auth);
+    renderApp(auth, "/signup");
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Username"), "coder_42");
     await user.tab();
@@ -353,7 +355,7 @@ describe("sign up", () => {
 
   it("blocks invalid usernames without asking the server", async () => {
     const auth = createFakeAuth();
-    renderApp(auth);
+    renderApp(auth, "/signup");
     const user = await fill("new@example.test", "a b", "secret1");
     await user.click(submit());
     expect(await screen.findByText(/Use 3 to 20 letters/)).toBeInTheDocument();
@@ -365,7 +367,7 @@ describe("sign up", () => {
   it("blocks taken usernames", async () => {
     const auth = createFakeAuth();
     auth.isUsernameAvailable = async () => false;
-    renderApp(auth);
+    renderApp(auth, "/signup");
     const user = await fill("new@example.test", "taken_name", "secret1");
     await user.click(submit());
     expect(await screen.findByText("That username is taken.")).toBeInTheDocument();
@@ -374,7 +376,7 @@ describe("sign up", () => {
 
   it("blocks short passwords", async () => {
     const auth = createFakeAuth();
-    renderApp(auth);
+    renderApp(auth, "/signup");
     const user = await fill("new@example.test", "coder_42", "123");
     await user.click(submit());
     expect(await screen.findByRole("alert")).toHaveTextContent("at least 6 characters");
@@ -386,7 +388,7 @@ describe("sign up", () => {
     auth.signUp = async () => {
       throw new AuthError("An account with this email already exists.");
     };
-    renderApp(auth);
+    renderApp(auth, "/signup");
     const user = await fill("dup@example.test", "coder_42", "secret1");
     await user.click(submit());
     expect(await screen.findByRole("alert")).toHaveTextContent("already exists");
@@ -399,7 +401,7 @@ describe("sign up", () => {
       return auth;
     };
     async function reachCodeStep(auth: FakeAuth) {
-      renderApp(auth);
+      renderApp(auth, "/signup");
       const user = await fill(" new@example.test ", "coder_42", "secret1");
       await user.click(submit());
       await screen.findByRole("form", { name: "Confirm your email" });
@@ -443,7 +445,7 @@ describe("sign up", () => {
       try {
         const auth = needsCode();
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-        renderApp(auth);
+        renderApp(auth, "/signup");
         await user.type(await screen.findByLabelText("Email"), "new@example.test");
         await user.type(screen.getByLabelText("Username"), "coder_42");
         await user.type(screen.getByLabelText("Password"), "secret1");
