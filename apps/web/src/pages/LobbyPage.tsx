@@ -5,38 +5,8 @@ import { BlitzMark } from "../components/BlitzMark";
 import { BRAND_NAME, Wordmark } from "../components/Brand";
 import { LoginForm } from "../components/LoginForm";
 import { SignUpForm } from "../components/SignUpForm";
-import type { LeaderboardEntry, LobbyStats } from "../lib/live";
+import type { LeaderboardEntry } from "../lib/live";
 import { useServices } from "../services";
-
-/** Players registered and battles today. Hidden if the numbers cannot be loaded. */
-function Stats() {
-  const { data } = useServices();
-  const [stats, setStats] = useState<LobbyStats | null>(null);
-  useEffect(() => {
-    let active = true;
-    data.getLobbyStats().then(
-      (s) => active && setStats(s),
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [data]);
-  if (!stats) return null;
-  return (
-    <ul className="m-0 flex list-none flex-wrap justify-center gap-2 p-0 lg:justify-start">
-      <li className="inline-flex items-center gap-2 border border-line bg-panel px-3 py-1.5 font-mono text-sm text-soft">
-        <span className="h-2 w-2 rounded-full bg-you" aria-hidden="true" />
-        <b className="text-you">{stats.players}</b> {stats.players === 1 ? "player" : "players"}
-      </li>
-      <li className="inline-flex items-center gap-2 border border-line bg-panel px-3 py-1.5 font-mono text-sm text-soft">
-        <span className="h-2 w-2 rotate-45 bg-rival" aria-hidden="true" />
-        <b className="text-rival">{stats.battlesToday}</b>{" "}
-        {stats.battlesToday === 1 ? "battle" : "battles"} today
-      </li>
-    </ul>
-  );
-}
 
 const PLACE_COLOURS = ["text-gold", "text-soft", "text-[#D08A4E]"];
 
@@ -151,7 +121,6 @@ export function LobbyPage({
           <p className="m-0 max-w-lg text-soft lg:text-lg">
             Live 1v1 coding battles. Same problem, same clock. First to pass every hidden test wins.
           </p>
-          <Stats />
           <ul className="m-0 mt-1 hidden list-none gap-2 p-0 lg:grid lg:grid-cols-3">
             {MODES.map((m) => (
               <li key={m.name} className="border border-line bg-panel px-3 py-2.5">

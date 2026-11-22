@@ -197,9 +197,8 @@ describe("lobby", () => {
     expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
   });
 
-  it("shows live numbers and the top three", async () => {
+  it("shows the top three", async () => {
     const services = createFakeServices();
-    services.lobbyStats = { players: 42, battlesToday: 1 };
     services.leaderboard = [
       {
         id: "u1",
@@ -223,9 +222,6 @@ describe("lobby", () => {
       },
     ];
     renderWithApp(createFakeAuth(), services, "/");
-    expect(await screen.findByText("players")).toBeInTheDocument();
-    expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText(/battle today/)).toBeInTheDocument();
     const top = await screen.findByRole("region", { name: "Top players" });
     expect(within(top).getByRole("link", { name: "alpha" })).toHaveAttribute("href", "/u/alpha");
     expect(within(top).getByText("1340")).toBeInTheDocument();
