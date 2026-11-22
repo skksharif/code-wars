@@ -11,6 +11,7 @@ import { RematchBanner, useRematch, WhatNext } from "./WhatNext";
 import { EmoteBubble, SaySomething, type EmotesView } from "./Emotes";
 import { AFTER_BATTLE_EMOTES } from "./emoteList";
 import { BattleRoasts } from "./BattleRoasts";
+import { AdSlot } from "../components/AdSlot";
 
 /** What happened in the overtime after the first solve, if there was one. */
 function overtimeText(state: BattleState, you: BattlePlayer, rival: BattlePlayer): string {
@@ -309,6 +310,8 @@ export function ResultView({
             )}
           </div>
         </section>
+        {/* Below everything, well away from Rematch and Find new battle. */}
+        <AdSlot unit="result" className="mt-4" />
       </div>
     </main>
   );

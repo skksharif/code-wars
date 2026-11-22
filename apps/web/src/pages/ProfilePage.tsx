@@ -1,3 +1,4 @@
+import { AdSlot } from "../components/AdSlot";
 import {
   AVATAR_INFO,
   AVATARS,
@@ -577,6 +578,7 @@ export function ProfilePage() {
             <p className="m-0 text-center font-mono text-xs text-muted">
               Playing since {monthYear(profile.memberSince)}
             </p>
+            <AdSlot unit="profile" className="mt-3" />
           </div>
         ) : (
           <div role="tabpanel" aria-label="Battles">
@@ -592,6 +594,7 @@ export function ProfilePage() {
       <div className="flex w-full max-w-[420px] flex-none flex-col gap-4">
         <PlayerCard profile={profile} />
         {picker}
+        <AdSlot unit="profile" className="mt-2" />
       </div>
 
       <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-5">

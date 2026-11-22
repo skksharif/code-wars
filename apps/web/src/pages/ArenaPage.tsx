@@ -1,3 +1,4 @@
+import { AdSlot } from "../components/AdSlot";
 import { LIMITS, matchWindow } from "@code-wars/shared";
 import { BlitzMark } from "../components/BlitzMark";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -244,6 +245,11 @@ export function ArenaPage() {
       </section>
 
       {messages}
+      {searching ? (
+        <div className="mx-auto hidden w-full max-w-3xl lg:block">
+          <AdSlot unit="arena" className="mt-6" />
+        </div>
+      ) : null}
     </main>
   );
 }

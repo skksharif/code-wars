@@ -1,3 +1,6 @@
+import { Fragment } from "react";
+import { AdSlot } from "../components/AdSlot";
+import { adUnitId } from "../lib/ads";
 import { useEffect, useState } from "react";
 import { BlitzMark } from "../components/BlitzMark";
 import { Link, useSearchParams } from "react-router-dom";
@@ -137,33 +140,43 @@ export function RankingsPage() {
                   {entries.slice(3).map((entry) => {
                     const isYou = entry.id === user?.id;
                     return (
-                      <tr
-                        key={entry.id}
-                        aria-current={isYou ? "true" : undefined}
-                        className={`border-t border-line ${isYou ? "bg-you/10" : ""}`}
-                      >
-                        <td className={`px-3 py-3.5 md:px-5 ${isYou ? "text-you" : "text-muted"}`}>
-                          {entry.rank}
-                        </td>
-                        <td className="px-3 py-3.5 font-sans md:px-5">
-                          <span className="flex min-w-0 items-center gap-1">
-                            <Link
-                              to={`/u/${entry.username}`}
-                              className="inline-flex min-w-0 items-center gap-2 text-ink"
-                            >
-                              <Avatar id={entry.avatar} size={28} decorative />
-                              <span className="truncate" title={entry.username}>
-                                {entry.username}
-                              </span>
-                            </Link>
-                            {isYou ? <span className="flex-none text-you"> (you)</span> : null}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3.5 text-right md:px-5">{entry.rating}</td>
-                        <td className="hidden px-5 py-3.5 text-right text-muted sm:table-cell">
-                          {entry.wins} / {entry.losses} / {entry.draws}
-                        </td>
-                      </tr>
+                      <Fragment key={entry.id}>
+                        <tr
+                          aria-current={isYou ? "true" : undefined}
+                          className={`border-t border-line ${isYou ? "bg-you/10" : ""}`}
+                        >
+                          <td
+                            className={`px-3 py-3.5 md:px-5 ${isYou ? "text-you" : "text-muted"}`}
+                          >
+                            {entry.rank}
+                          </td>
+                          <td className="px-3 py-3.5 font-sans md:px-5">
+                            <span className="flex min-w-0 items-center gap-1">
+                              <Link
+                                to={`/u/${entry.username}`}
+                                className="inline-flex min-w-0 items-center gap-2 text-ink"
+                              >
+                                <Avatar id={entry.avatar} size={28} decorative />
+                                <span className="truncate" title={entry.username}>
+                                  {entry.username}
+                                </span>
+                              </Link>
+                              {isYou ? <span className="flex-none text-you"> (you)</span> : null}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3.5 text-right md:px-5">{entry.rating}</td>
+                          <td className="hidden px-5 py-3.5 text-right text-muted sm:table-cell">
+                            {entry.wins} / {entry.losses} / {entry.draws}
+                          </td>
+                        </tr>
+                        {entry.rank === 10 && adUnitId("rankings") ? (
+                          <tr className="border-t border-line">
+                            <td colSpan={4} className="px-3 py-4 md:px-5">
+                              <AdSlot unit="rankings" />
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
                     );
                   })}
                 </tbody>
