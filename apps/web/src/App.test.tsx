@@ -180,7 +180,7 @@ describe("log in", () => {
 });
 
 describe("privacy policy", () => {
-  it("is linked from the footer and open to visitors", async () => {
+  it("is linked from the log-in card and open to visitors", async () => {
     renderApp(createFakeAuth());
     const user = userEvent.setup();
     await user.click(await screen.findByRole("link", { name: "Privacy Policy" }));

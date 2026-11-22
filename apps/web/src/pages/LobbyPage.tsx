@@ -155,6 +155,13 @@ export function LobbyPage({
                 <LoginForm onLoggedIn={onLoggedIn} />
               </>
             )}
+            <p className="mt-5 mb-0 text-center text-xs text-muted">
+              By continuing you agree to our{" "}
+              <Link to="/privacy" className="text-soft underline underline-offset-4 hover:text-ink">
+                Privacy Policy
+              </Link>
+              .
+            </p>
           </div>
         </section>
 

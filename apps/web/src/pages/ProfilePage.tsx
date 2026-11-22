@@ -607,6 +607,16 @@ export function ProfilePage() {
         {chart}
         {breakdown}
         {battles}
+        {isMe ? (
+          <p className="m-0 text-right text-xs">
+            <Link
+              to="/privacy"
+              className="text-muted underline-offset-4 hover:text-ink hover:underline"
+            >
+              Privacy Policy
+            </Link>
+          </p>
+        ) : null}
       </div>
     </main>
   );
