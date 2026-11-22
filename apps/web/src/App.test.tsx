@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "./lib/authService";
 import { createFakeAuth, TEST_USER, type FakeAuth } from "./test/fakeAuth";
 import { createFakeServices, renderWithApp } from "./test/fakeServices";
@@ -249,12 +249,82 @@ describe("sign up", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("already exists");
   });
 
-  it("asks the user to confirm their email when confirmation is switched on", async () => {
-    const auth = createFakeAuth();
-    auth.signUp = async () => ({ needsEmailConfirmation: true });
-    renderApp(auth);
-    const user = await fill("new@example.test", "coder_42", "secret1");
-    await user.click(submit());
-    expect(await screen.findByRole("status")).toHaveTextContent("Check your email");
+  describe("email code", () => {
+    const needsCode = () => {
+      const auth = createFakeAuth();
+      auth.signUp = vi.fn(async () => ({ needsEmailConfirmation: true }));
+      return auth;
+    };
+    async function reachCodeStep(auth: FakeAuth) {
+      renderApp(auth);
+      const user = await fill(" new@example.test ", "coder_42", "secret1");
+      await user.click(submit());
+      await screen.findByRole("form", { name: "Confirm your email" });
+      return user;
+    }
+
+    it("asks for the 6-digit code sent to the email", async () => {
+      await reachCodeStep(needsCode());
+      expect(screen.getByText("new@example.test")).toBeInTheDocument();
+      expect(screen.getByLabelText("6-digit code")).toHaveFocus();
+      expect(screen.getByRole("button", { name: "Send a new code in 60s" })).toBeDisabled();
+    });
+
+    it("confirms the account as soon as the last digit is typed, then enters the arena", async () => {
+      const auth = needsCode();
+      const user = await reachCodeStep(auth);
+      await user.type(screen.getByLabelText("6-digit code"), "48 29a13");
+      expect(await screen.findByText("coder_42", { selector: "h1" })).toBeInTheDocument();
+      expect(auth.verifySignUpCode).toHaveBeenCalledTimes(1);
+      expect(auth.verifySignUpCode).toHaveBeenCalledWith("new@example.test", "482913");
+    });
+
+    it("explains a wrong code and lets the player try another", async () => {
+      const auth = needsCode();
+      auth.verifySignUpCode = vi
+        .fn()
+        .mockRejectedValueOnce(new AuthError("That code is wrong or has expired."))
+        .mockImplementationOnce(async () => auth.emit(TEST_USER));
+      const user = await reachCodeStep(auth);
+      const input = screen.getByLabelText("6-digit code");
+      await user.type(input, "111111");
+      expect(await screen.findByRole("alert")).toHaveTextContent("wrong or has expired");
+      await user.clear(input);
+      await user.type(input, "222222");
+      expect(await screen.findByText("coder_42", { selector: "h1" })).toBeInTheDocument();
+      expect(auth.verifySignUpCode).toHaveBeenLastCalledWith("new@example.test", "222222");
+    });
+
+    it("sends a new code after the wait", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const auth = needsCode();
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        renderApp(auth);
+        await user.type(await screen.findByLabelText("Email"), "new@example.test");
+        await user.type(screen.getByLabelText("Username"), "coder_42");
+        await user.type(screen.getByLabelText("Password"), "secret1");
+        await user.click(submit());
+        await screen.findByRole("form", { name: "Confirm your email" });
+        for (let i = 0; i < 61; i++) {
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(1000);
+          });
+        }
+        await user.click(screen.getByRole("button", { name: "Send a new code" }));
+        expect(auth.resendSignUpCode).toHaveBeenCalledWith("new@example.test");
+        expect(await screen.findByRole("status")).toHaveTextContent("A new code is on its way");
+        expect(screen.getByRole("button", { name: /Send a new code in/ })).toBeDisabled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("goes back to fix the email, keeping what was typed", async () => {
+      const user = await reachCodeStep(needsCode());
+      await user.click(screen.getByRole("button", { name: "Wrong email? Go back" }));
+      expect(screen.getByLabelText("Email")).toHaveValue("new@example.test");
+      expect(screen.getByLabelText("Username")).toHaveValue("coder_42");
+    });
   });
 });

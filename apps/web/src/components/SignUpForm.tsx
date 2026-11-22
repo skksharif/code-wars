@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { AuthError } from "../lib/authService";
 import { Button, TextField } from "./ui";
+import { VerifyEmailStep } from "./VerifyEmailStep";
 
 type UsernameCheck = "idle" | "checking" | "available" | "taken" | "invalid";
 
@@ -15,7 +16,8 @@ export function SignUpForm({ onSignedUp }: { onSignedUp: () => void }) {
   const [password, setPassword] = useState("");
   const [check, setCheck] = useState<UsernameCheck>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  /** Set once the account is created and waits for the code from the email. */
+  const [verifying, setVerifying] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function checkUsername(value: string): Promise<UsernameCheck> {
@@ -38,7 +40,6 @@ export function SignUpForm({ onSignedUp }: { onSignedUp: () => void }) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    setNotice(null);
 
     if (password.length < MIN_PASSWORD) {
       setError(`Use a password of at least ${MIN_PASSWORD} characters.`);
@@ -49,9 +50,10 @@ export function SignUpForm({ onSignedUp }: { onSignedUp: () => void }) {
 
     setBusy(true);
     try {
-      const { needsEmailConfirmation } = await service.signUp(email.trim(), password, username);
+      const address = email.trim();
+      const { needsEmailConfirmation } = await service.signUp(address, password, username);
       if (needsEmailConfirmation) {
-        setNotice("Check your email to confirm your account, then log in.");
+        setVerifying(address);
       } else {
         onSignedUp();
       }
@@ -69,6 +71,16 @@ export function SignUpForm({ onSignedUp }: { onSignedUp: () => void }) {
     taken: "That username is taken.",
     invalid: `Use ${LIMITS.usernameMin} to ${LIMITS.usernameMax} letters, digits or underscores.`,
   };
+
+  if (verifying) {
+    return (
+      <VerifyEmailStep
+        email={verifying}
+        onVerified={onSignedUp}
+        onBack={() => setVerifying(null)}
+      />
+    );
+  }
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4" aria-label="Create account">
@@ -119,11 +131,6 @@ export function SignUpForm({ onSignedUp }: { onSignedUp: () => void }) {
       {error ? (
         <p role="alert" className="m-0 text-rival">
           {error}
-        </p>
-      ) : null}
-      {notice ? (
-        <p role="status" className="m-0 text-you">
-          {notice}
         </p>
       ) : null}
       <div className="flex flex-wrap items-center gap-4">

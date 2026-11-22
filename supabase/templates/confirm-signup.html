@@ -1,0 +1,119 @@
+<!--
+  Supabase > Authentication > Emails > Templates > "Confirm signup"
+  Subject: {{ .Token }} is your Code Wars code
+  Paste everything below this comment as the message body.
+  Tables and inline styles only: Gmail and Outlook ignore most modern CSS.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+    <title>Your Code Wars code</title>
+  </head>
+  <body style="margin:0;padding:0;background:#05060A;">
+    <!-- Inbox preview line (hidden in the email itself) -->
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#05060A;">
+      Your code is {{ .Token }}. Enter it to finish creating your Code Wars account.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#05060A" style="background:#05060A;">
+      <tr>
+        <td align="center" style="padding:32px 12px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
+            <!-- Logo -->
+            <tr>
+              <td align="center" style="padding:0 0 24px;">
+                <img src="https://code-wars.unified-loans-commercial.workers.dev/logo.png" width="168" alt="CODE WARS" style="display:block;width:168px;height:auto;border:0;color:#22E6FF;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;letter-spacing:4px;" />
+              </td>
+            </tr>
+
+            <!-- Card -->
+            <tr>
+              <td bgcolor="#0D0F17" style="background:#0D0F17;border:1px solid #232838;">
+                <!-- Cyan | pink split bar: you vs rival -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td width="50%" height="4" bgcolor="#22E6FF" style="background:#22E6FF;font-size:0;line-height:0;">&nbsp;</td>
+                    <td width="50%" height="4" bgcolor="#FF2E9A" style="background:#FF2E9A;font-size:0;line-height:0;">&nbsp;</td>
+                  </tr>
+                </table>
+
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:32px 28px 8px;font-family:Arial,Helvetica,sans-serif;">
+                      <p style="margin:0 0 10px;font-family:'Courier New',Courier,monospace;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#22E6FF;">
+                        &gt; Player registration
+                      </p>
+                      <h1 style="margin:0 0 12px;font-size:28px;line-height:1.2;font-weight:bold;font-style:italic;text-transform:uppercase;letter-spacing:1px;color:#F2F5FF;">
+                        Your access code
+                      </h1>
+                      <p style="margin:0;font-size:15px;line-height:1.6;color:#C3CAE0;">
+                        Type this code on the sign-up screen to unlock your account and enter the arena.
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- The code -->
+                  <tr>
+                    <td style="padding:24px 28px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td align="center" bgcolor="#05060A" style="background:#05060A;border:2px solid #22E6FF;padding:22px 8px;box-shadow:0 0 24px rgba(34,230,255,0.35);">
+                            <span style="font-family:'Courier New',Courier,monospace;font-size:40px;line-height:1;font-weight:bold;letter-spacing:12px;padding-left:12px;color:#22E6FF;">{{ .Token }}</span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td align="center" style="padding:12px 0 0;font-family:'Courier New',Courier,monospace;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#9BA3B8;">
+                            Expires in 1 hour &nbsp;&middot;&nbsp; single use
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- What happens next -->
+                  <tr>
+                    <td style="padding:4px 28px 28px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #232838;">
+                        <tr>
+                          <td style="padding:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#C3CAE0;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                              <tr>
+                                <td valign="top" style="padding:0 12px 10px 0;font-family:'Courier New',Courier,monospace;font-weight:bold;color:#22E6FF;">01</td>
+                                <td style="padding:0 0 10px;">Enter the code and you are in.</td>
+                              </tr>
+                              <tr>
+                                <td valign="top" style="padding:0 12px 10px 0;font-family:'Courier New',Courier,monospace;font-weight:bold;color:#FF2E9A;">02</td>
+                                <td style="padding:0 0 10px;">Queue for a 1v1: Ranked, Blitz or a custom room with a friend.</td>
+                              </tr>
+                              <tr>
+                                <td valign="top" style="padding:0 12px 0 0;font-family:'Courier New',Courier,monospace;font-weight:bold;color:#FFC83D;">03</td>
+                                <td>Solve it first, pass the hidden tests, climb from 1200.</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td align="center" style="padding:22px 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#9BA3B8;">
+                Never share this code. Code Wars will never ask you for it.<br />
+                Did not sign up? You can safely ignore this email.<br />
+                <span style="color:#5B6380;">Sent to {{ .Email }}</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -32,6 +32,10 @@ export interface AuthService {
     password: string,
     username: string,
   ): Promise<{ needsEmailConfirmation: boolean }>;
+  /** Confirms a new account with the 6-digit code from the sign-up email, and signs in. */
+  verifySignUpCode(email: string, code: string): Promise<void>;
+  /** Sends the sign-up code again. */
+  resendSignUpCode(email: string): Promise<void>;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   isUsernameAvailable(username: string): Promise<boolean>;
@@ -43,6 +47,12 @@ function friendly(message: string | undefined, fallback: string): string {
   if (text.includes("database error")) return "That username is taken or not allowed.";
   if (text.includes("already registered")) return "An account with this email already exists.";
   if (text.includes("invalid login")) return "Wrong email or password.";
+  if (text.includes("token") || text.includes("otp"))
+    return "That code is wrong or has expired. Check the latest email or send a new code.";
+  if (text.includes("not confirmed"))
+    return "Confirm your email first: sign up again with this email to get a new code.";
+  const wait = /after (\d+) seconds?/.exec(text);
+  if (wait) return `Wait ${wait[1]} seconds before asking for another code.`;
   if (text.includes("password")) return "Use a password of at least 6 characters.";
   if (text.includes("email rate limit"))
     return "Too many sign-up emails were sent recently. Try again in an hour.";
@@ -86,6 +96,16 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
       });
       if (error) throw new AuthError(friendly(error.message, "Could not create the account."));
       return { needsEmailConfirmation: !data.session };
+    },
+
+    async verifySignUpCode(email, code) {
+      const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "signup" });
+      if (error) throw new AuthError(friendly(error.message, "Could not check the code."));
+    },
+
+    async resendSignUpCode(email) {
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+      if (error) throw new AuthError(friendly(error.message, "Could not send a new code."));
     },
 
     async signIn(email, password) {

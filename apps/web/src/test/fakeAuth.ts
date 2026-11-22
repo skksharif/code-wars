@@ -37,6 +37,8 @@ export function createFakeAuth(initialUser: AuthUser | null = null): FakeAuth {
       emit(TEST_USER);
       return { needsEmailConfirmation: false };
     }),
+    verifySignUpCode: vi.fn(async () => emit(TEST_USER)),
+    resendSignUpCode: vi.fn(async () => undefined),
     signIn: vi.fn(async () => emit(TEST_USER)),
     signOut: vi.fn(async () => emit(null)),
     isUsernameAvailable: vi.fn(async () => true),
