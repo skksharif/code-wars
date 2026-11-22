@@ -15,6 +15,6 @@
     "JUDGE_DAILY_LIMIT": "200",
     "JUDGE0_API_URL": "https://judge0-ce.p.rapidapi.com",
     "JUDGE0_API_HOST": "judge0-ce.p.rapidapi.com",
-    "ALLOWED_ORIGINS": "https://code-wars.unified-loans-commercial.workers.dev",
+    "ALLOWED_ORIGINS": "https://clashofcoders.online, https://www.clashofcoders.online, https://code-wars.unified-loans-commercial.workers.dev",
   },
 }
