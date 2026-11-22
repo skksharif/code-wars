@@ -11,6 +11,7 @@ import { LoginPage } from "./pages/LoginPage";
 // A first-time visitor lands on the landing or log-in page, so those two are
 // part of the first download. Every other page (the battle room with its
 // problem-statement renderer above all) downloads only when it is opened.
+const PrivacyPage = lazyPage(() => import("./pages/PrivacyPage").then((m) => m.PrivacyPage));
 const ArenaPage = lazyPage(() => import("./pages/ArenaPage").then((m) => m.ArenaPage));
 const BattlePage = lazyPage(() => import("./pages/BattlePage").then((m) => m.BattlePage));
 const FriendsPage = lazyPage(() => import("./pages/FriendsPage").then((m) => m.FriendsPage));
@@ -55,6 +56,7 @@ export function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignUpPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
               <Route
                 path="/arena"
                 element={

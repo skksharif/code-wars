@@ -325,6 +325,19 @@ export function Layout({ children }: { children: ReactNode }) {
         className={`flex flex-1 flex-col ${showSections ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-24" : ""}`}
       >
         {children}
+        {pathname.startsWith("/battle/") ? null : (
+          <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-line px-4 py-4 text-sm text-muted">
+            <span>
+              © {new Date().getFullYear()} {BRAND_NAME}
+            </span>
+            <Link
+              to="/privacy"
+              className="text-muted underline-offset-4 hover:text-ink hover:underline"
+            >
+              Privacy Policy
+            </Link>
+          </footer>
+        )}
       </div>
       {showSections ? <SectionBar /> : null}
     </div>

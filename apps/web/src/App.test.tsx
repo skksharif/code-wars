@@ -179,6 +179,22 @@ describe("log in", () => {
   });
 });
 
+describe("privacy policy", () => {
+  it("is linked from the footer and open to visitors", async () => {
+    renderApp(createFakeAuth());
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("link", { name: "Privacy Policy" }));
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Privacy Policy" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Google AdSense/, { selector: "b" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Google Ads Settings" })).toHaveAttribute(
+      "href",
+      "https://adssettings.google.com",
+    );
+  });
+});
+
 describe("lobby", () => {
   it("switches between Sign up and Log in on the same card", async () => {
     renderApp(createFakeAuth());
