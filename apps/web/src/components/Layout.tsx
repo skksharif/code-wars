@@ -271,7 +271,7 @@ export function Layout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-ground text-ink">
+    <div className="flex min-h-dvh flex-col bg-ground text-ink">
       <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2 md:px-[5%]">
         <Logo />
         <div className="flex items-center gap-2 md:gap-3">
@@ -326,7 +326,7 @@ export function Layout({ children }: { children: ReactNode }) {
       >
         {children}
         {pathname.startsWith("/battle/") ? null : (
-          <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-line px-4 py-4 text-sm text-muted">
+          <footer className="mt-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-line px-4 py-4 text-sm text-muted">
             <span>
               © {new Date().getFullYear()} {BRAND_NAME}
             </span>
