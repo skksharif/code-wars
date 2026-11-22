@@ -19,6 +19,7 @@ import type {
   HistoryEntry,
   LeaderboardEntry,
   PublicProfile,
+  LobbyStats,
 } from "../lib/live";
 import { ServicesProvider, type Services } from "../services";
 import type { FakeAuth } from "./fakeAuth";
@@ -175,6 +176,7 @@ export interface FakeServices extends Services {
   leaderboard: LeaderboardEntry[] | Error;
   /** Which rankings were asked for, in order. */
   leaderboardModes: string[];
+  lobbyStats: LobbyStats;
   history: HistoryEntry[] | Error;
   profiles: Record<string, PublicProfile> | Error;
 }
@@ -203,6 +205,7 @@ export function createFakeServices(): FakeServices {
     solutions: [],
     leaderboard: [],
     leaderboardModes: [],
+    lobbyStats: { players: 0, battlesToday: 0 },
     history: [],
     profiles: {},
     api: {
@@ -339,6 +342,7 @@ export function createFakeServices(): FakeServices {
     },
     data: {
       getFinalSubmissions: async () => services.solutions,
+      getLobbyStats: async () => services.lobbyStats,
       getPublicProfile: async (username) => {
         if (services.profiles instanceof Error) throw services.profiles;
         const found = Object.values(services.profiles).find(

@@ -31,12 +31,17 @@ export interface AuthService {
     email: string,
     password: string,
     username: string,
+    avatar?: string,
   ): Promise<{ needsEmailConfirmation: boolean }>;
   /** Confirms a new account with the 6-digit code from the sign-up email, and signs in. */
   verifySignUpCode(email: string, code: string): Promise<void>;
   /** Sends the sign-up code again. */
   resendSignUpCode(email: string): Promise<void>;
   signIn(email: string, password: string): Promise<void>;
+  /** Emails a code for choosing a new password (sent even if no account exists: never reveals that). */
+  requestPasswordReset(email: string): Promise<void>;
+  /** Checks the reset code, then sets the new password. Leaves the player signed in. */
+  resetPassword(email: string, code: string, newPassword: string): Promise<void>;
   signOut(): Promise<void>;
   isUsernameAvailable(username: string): Promise<boolean>;
   getProfile(userId: string): Promise<Profile | null>;
@@ -44,11 +49,15 @@ export interface AuthService {
 
 function friendly(message: string | undefined, fallback: string): string {
   const text = (message ?? "").toLowerCase();
+  if (text.includes("error sending"))
+    return "We could not send the email right now. Try again in a few minutes.";
   if (text.includes("database error")) return "That username is taken or not allowed.";
   if (text.includes("already registered")) return "An account with this email already exists.";
   if (text.includes("invalid login")) return "Wrong email or password.";
   if (text.includes("token") || text.includes("otp"))
     return "That code is wrong or has expired. Check the latest email or send a new code.";
+  if (text.includes("different from the old"))
+    return "Choose a new password, not the one you had before.";
   if (text.includes("not confirmed"))
     return "Confirm your email first: sign up again with this email to get a new code.";
   const wait = /after (\d+) seconds?/.exec(text);
@@ -82,12 +91,12 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
       return data.session?.access_token ?? null;
     },
 
-    async signUp(email, password, username) {
+    async signUp(email, password, username, avatar) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { username },
+          data: avatar ? { username, avatar } : { username },
           // Send the confirmation link back to this site. Supabase only honours it
           // if the address is in Authentication > URL Configuration > Redirect URLs;
           // otherwise it falls back to the project's Site URL.
@@ -111,6 +120,20 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
     async signIn(email, password) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw new AuthError(friendly(error.message, "Could not log in."));
+    },
+
+    async requestPasswordReset(email) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw new AuthError(friendly(error.message, "Could not send the code."));
+    },
+
+    async resetPassword(email, code, newPassword) {
+      const verified = await supabase.auth.verifyOtp({ email, token: code, type: "recovery" });
+      if (verified.error) {
+        throw new AuthError(friendly(verified.error.message, "Could not check the code."));
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw new AuthError(friendly(error.message, "Could not change the password."));
     },
 
     async signOut() {

@@ -107,6 +107,13 @@ export interface BattleData {
   getHistory(userId: string): Promise<HistoryEntry[]>;
   /** Each player's latest submitted solution. The opponent's is readable only after the battle. */
   getFinalSubmissions(battleId: string): Promise<FinalSubmission[]>;
+  /** Public counts for the landing page. */
+  getLobbyStats(): Promise<LobbyStats>;
+}
+
+export interface LobbyStats {
+  players: number;
+  battlesToday: number;
 }
 
 export function createSupabaseLive(supabase: SupabaseClient): LiveService {
@@ -366,6 +373,13 @@ export function createSupabaseBattleData(supabase: SupabaseClient): BattleData {
           isRated: row.battles?.is_rated ?? true,
         }))
         .sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
+    },
+
+    async getLobbyStats() {
+      const { data, error } = await supabase.rpc("get_lobby_stats");
+      if (error || !data) throw new Error("Could not load the lobby stats.");
+      const row = data as { players: number; battles_today: number };
+      return { players: Number(row.players) || 0, battlesToday: Number(row.battles_today) || 0 };
     },
 
     async getFinalSubmissions(battleId) {

@@ -324,8 +324,8 @@ describe("the room", () => {
     open(`/room/${ROOM_ID}`);
     await userEvent.click(await screen.findByRole("button", { name: "Share invite" }));
     expect(share).toHaveBeenCalledWith({
-      title: "Code Wars",
-      text: "Join my Code Wars room: K7M2QX",
+      title: "Clash of Coders",
+      text: "Join my Clash of Coders room: K7M2QX",
       url: `${window.location.origin}/join/K7M2QX`,
     });
   });

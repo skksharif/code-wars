@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { AuthError } from "../lib/authService";
+import { ForgotPassword } from "./ForgotPassword";
+import { PasswordField } from "./PasswordField";
 import { Button, TextField } from "./ui";
 
 export function LoginForm({ onLoggedIn }: { onLoggedIn: () => void }) {
@@ -9,6 +11,7 @@ export function LoginForm({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -24,6 +27,16 @@ export function LoginForm({ onLoggedIn }: { onLoggedIn: () => void }) {
     }
   }
 
+  if (forgot) {
+    return (
+      <ForgotPassword
+        initialEmail={email.trim()}
+        onDone={onLoggedIn}
+        onBack={() => setForgot(false)}
+      />
+    );
+  }
+
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4" aria-label="Log in">
       <TextField
@@ -35,15 +48,21 @@ export function LoginForm({ onLoggedIn }: { onLoggedIn: () => void }) {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      <TextField
+      <PasswordField
         id="login-password"
         label="Password"
-        type="password"
         autoComplete="current-password"
         required
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
+      <button
+        type="button"
+        onClick={() => setForgot(true)}
+        className="-mt-2 cursor-pointer self-end border-0 bg-transparent p-0 text-sm text-you underline-offset-4 hover:underline"
+      >
+        Forgot password?
+      </button>
       {error ? (
         <p role="alert" className="m-0 text-rival">
           {error}

@@ -1,6 +1,6 @@
 <!--
   Supabase > Authentication > Emails > Templates > "Confirm signup"
-  Subject: {{ .Token }} is your Code Wars code
+  Subject: {{ .Token }} is your Clash of Coders code
   Paste everything below this comment as the message body.
   Tables and inline styles only: Gmail and Outlook ignore most modern CSS.
 -->
@@ -11,12 +11,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <meta name="supported-color-schemes" content="dark" />
-    <title>Your Code Wars code</title>
+    <title>Your Clash of Coders code</title>
   </head>
   <body style="margin:0;padding:0;background:#05060A;">
     <!-- Inbox preview line (hidden in the email itself) -->
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#05060A;">
-      Your code is {{ .Token }}. Enter it to finish creating your Code Wars account.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;
+      Your code is {{ .Token }}. Enter it to finish creating your Clash of Coders account.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;
     </div>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#05060A" style="background:#05060A;">
@@ -26,7 +26,7 @@
             <!-- Logo -->
             <tr>
               <td align="center" style="padding:0 0 24px;">
-                <img src="https://code-wars.unified-loans-commercial.workers.dev/logo.png" width="168" alt="CODE WARS" style="display:block;width:168px;height:auto;border:0;color:#22E6FF;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;letter-spacing:4px;" />
+                <span style="font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:1;font-weight:bold;font-style:italic;letter-spacing:2px;text-transform:uppercase;"><span style="color:#22E6FF;">Clash</span> <span style="color:#9BA3B8;font-size:16px;">of</span> <span style="color:#FF2E9A;">Coders</span></span>
               </td>
             </tr>
 
@@ -106,7 +106,7 @@
             <!-- Footer -->
             <tr>
               <td align="center" style="padding:22px 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#9BA3B8;">
-                Never share this code. Code Wars will never ask you for it.<br />
+                Never share this code. Clash of Coders will never ask you for it.<br />
                 Did not sign up? You can safely ignore this email.<br />
                 <span style="color:#5B6380;">Sent to {{ .Email }}</span>
               </td>

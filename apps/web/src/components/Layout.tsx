@@ -4,17 +4,18 @@ import { useAuth } from "../auth/AuthContext";
 import { useNotifications } from "../friends/notifications";
 import type { Profile } from "../lib/authService";
 import { Avatar } from "./Avatar";
+import { BRAND_NAME, Wordmark } from "./Brand";
 
-/** The brand: the clashing-brackets mark with the CODE WARS lettering below. */
+/** The brand: the clashing-brackets mark with the CLASH of CODERS lettering below. */
 export function Logo() {
   return (
     <Link
       to="/"
-      aria-label="Code Wars home"
+      aria-label={`${BRAND_NAME} home`}
       className="flex flex-none flex-col items-center gap-1 no-underline"
     >
       <img src="/logo-mark.png" alt="" width={55} height={36} className="block h-8 w-auto" />
-      <img src="/logo-wordmark.png" alt="" width={112} height={14} className="block h-3.5 w-auto" />
+      <Wordmark className="text-[13px]" />
     </Link>
   );
 }

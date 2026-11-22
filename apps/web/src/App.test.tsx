@@ -24,11 +24,11 @@ describe("routing and access", () => {
 
   it("shows the logo in the menu, linking home, and on the landing page", async () => {
     renderApp(createFakeAuth());
-    expect(await screen.findByRole("img", { name: "Code Wars" })).toHaveAttribute(
+    expect(await screen.findByRole("img", { name: "Clash of Coders" })).toHaveAttribute(
       "src",
-      "/logo.png",
+      "/logo-mark.png",
     );
-    expect(screen.getByRole("link", { name: "Code Wars home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Clash of Coders home" })).toHaveAttribute("href", "/");
   });
 
   describe("phone menu", () => {
@@ -179,7 +179,149 @@ describe("log in", () => {
   });
 });
 
+describe("lobby", () => {
+  it("switches between Sign up and Log in on the same card", async () => {
+    renderApp(createFakeAuth());
+    const account = await screen.findByRole("navigation", { name: "Account" });
+    expect(within(account).getByRole("link", { name: "Sign up" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    const user = userEvent.setup();
+    await user.click(within(account).getByRole("link", { name: "Log in" }));
+    expect(await screen.findByRole("form", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Code. Clash. Climb.");
+    // Each tab is its own page, so look the card up again.
+    const again = screen.getByRole("navigation", { name: "Account" });
+    await user.click(within(again).getByRole("link", { name: "Sign up" }));
+    expect(await screen.findByRole("form", { name: "Create account" })).toBeInTheDocument();
+  });
+
+  it("shows live numbers and the top three", async () => {
+    const services = createFakeServices();
+    services.lobbyStats = { players: 42, battlesToday: 1 };
+    services.leaderboard = [
+      {
+        id: "u1",
+        username: "alpha",
+        avatar: "nova",
+        rating: 1340,
+        wins: 5,
+        losses: 1,
+        draws: 0,
+        rank: 1,
+      },
+      {
+        id: "u2",
+        username: "bravo",
+        avatar: "echo",
+        rating: 1290,
+        wins: 3,
+        losses: 2,
+        draws: 0,
+        rank: 2,
+      },
+    ];
+    renderWithApp(createFakeAuth(), services, "/");
+    expect(await screen.findByText("players")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.getByText(/battle today/)).toBeInTheDocument();
+    const top = await screen.findByRole("region", { name: "Top players" });
+    expect(within(top).getByRole("link", { name: "alpha" })).toHaveAttribute("href", "/u/alpha");
+    expect(within(top).getByText("1340")).toBeInTheDocument();
+  });
+
+  it("invites the first winner when the board is empty", async () => {
+    renderApp(createFakeAuth());
+    const top = await screen.findByRole("region", { name: "Top players" });
+    expect(top).toHaveTextContent("The board is empty");
+  });
+});
+
+describe("log in extras", () => {
+  it("shows and hides the password", async () => {
+    renderApp(createFakeAuth(), "/login");
+    const user = userEvent.setup();
+    const field = await screen.findByLabelText("Password");
+    expect(field).toHaveAttribute("type", "password");
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+    expect(field).toHaveAttribute("type", "text");
+    await user.click(screen.getByRole("button", { name: "Hide password" }));
+    expect(field).toHaveAttribute("type", "password");
+  });
+
+  it("resets a forgotten password with an emailed code, then enters the arena", async () => {
+    const auth = createFakeAuth();
+    renderApp(auth, "/login");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Email"), "a@example.test");
+    await user.click(screen.getByRole("button", { name: "Forgot password?" }));
+    const ask = await screen.findByRole("form", { name: "Reset password" });
+    expect(within(ask).getByLabelText("Email")).toHaveValue("a@example.test");
+    await user.click(within(ask).getByRole("button", { name: "Send code" }));
+    expect(auth.requestPasswordReset).toHaveBeenCalledWith("a@example.test");
+
+    const form = await screen.findByRole("form", { name: "Choose a new password" });
+    await user.type(within(form).getByLabelText("Code from the email"), "12 34ab56");
+    await user.type(within(form).getByLabelText("New password"), "newpass9");
+    await user.click(within(form).getByRole("button", { name: "Save and log in" }));
+    expect(auth.resetPassword).toHaveBeenCalledWith("a@example.test", "123456", "newpass9");
+    expect(await screen.findByText("coder_42", { selector: "h1" })).toBeInTheDocument();
+  });
+
+  it("explains a wrong reset code", async () => {
+    const auth = createFakeAuth();
+    auth.resetPassword = vi.fn(async () => {
+      throw new AuthError("That code is wrong or has expired.");
+    });
+    renderApp(auth, "/login");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Forgot password?" }));
+    await user.type(screen.getByLabelText("Email"), "a@example.test");
+    await user.click(screen.getByRole("button", { name: "Send code" }));
+    await user.type(await screen.findByLabelText("Code from the email"), "000000");
+    await user.type(screen.getByLabelText("New password"), "newpass9");
+    await user.click(screen.getByRole("button", { name: "Save and log in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("wrong or has expired");
+  });
+});
+
 describe("sign up", () => {
+  it("sends the chosen avatar with the account", async () => {
+    const auth = createFakeAuth();
+    renderApp(auth);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Email"), "new@example.test");
+    await user.type(screen.getByLabelText("Username"), "coder_42");
+    await user.type(screen.getByLabelText("Password"), "secret1");
+    await user.click(screen.getByRole("radio", { name: "Pixel" }));
+    expect(screen.getByRole("radio", { name: "Pixel" })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    await waitFor(() =>
+      expect(auth.signUp).toHaveBeenCalledWith("new@example.test", "secret1", "coder_42", "pixel"),
+    );
+  });
+
+  it("checks the username while typing, without leaving the field", async () => {
+    const auth = createFakeAuth();
+    auth.isUsernameAvailable = vi.fn(async (name: string) => name !== "taken_one");
+    renderApp(auth);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Username"), "taken_one");
+    expect(await screen.findByText("That username is taken.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Username")).toHaveFocus();
+  });
+
+  it("rates the new password's strength", async () => {
+    renderApp(createFakeAuth());
+    const user = userEvent.setup();
+    const field = await screen.findByLabelText("Password");
+    await user.type(field, "abcdef");
+    expect(screen.getByText("Weak")).toBeInTheDocument();
+    await user.type(field, "GH12!");
+    expect(screen.getByText("Strong")).toBeInTheDocument();
+  });
+
   async function fill(email: string, username: string, password: string) {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Email"), email);
@@ -195,7 +337,12 @@ describe("sign up", () => {
     const user = await fill("new@example.test", "coder_42", "secret1");
     await user.click(submit());
     expect(await screen.findByText("coder_42", { selector: "h1" })).toBeInTheDocument();
-    expect(auth.signUp).toHaveBeenCalledWith("new@example.test", "secret1", "coder_42");
+    expect(auth.signUp).toHaveBeenCalledWith(
+      "new@example.test",
+      "secret1",
+      "coder_42",
+      expect.any(String),
+    );
   });
 
   it("checks the username when leaving the field", async () => {

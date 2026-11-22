@@ -102,7 +102,7 @@ describe("rankings", () => {
     first.unmount();
 
     renderWithApp(createFakeAuth(), services, "/");
-    expect(await screen.findByRole("link", { name: "See the rankings" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "All rankings" })).toHaveAttribute(
       "href",
       "/rankings",
     );

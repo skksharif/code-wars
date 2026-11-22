@@ -192,8 +192,8 @@ export function ShareButton({ code }: { code: string }) {
       onClick={() =>
         void navigator
           .share({
-            title: "Code Wars",
-            text: `Join my Code Wars room: ${code}`,
+            title: "Clash of Coders",
+            text: `Join my Clash of Coders room: ${code}`,
             url: joinLink(code),
           })
           .catch(() => undefined)
@@ -284,8 +284,8 @@ export function ShareRow({ code }: { code: string }) {
           onClick={() =>
             void navigator
               .share({
-                title: "Code Wars",
-                text: `Join my Code Wars room: ${code}`,
+                title: "Clash of Coders",
+                text: `Join my Clash of Coders room: ${code}`,
                 url: joinLink(code),
               })
               .catch(() => undefined)
